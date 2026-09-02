@@ -7,7 +7,7 @@ const config = JSON.parse(fs.readFileSync(new URL("../config/schedules.json", im
 
 const day = selectScheduleContent(config, { date: "2026-09-09", portraitNarrow: true });
 const phone = renderSelectionContent(config, day, {
-  baseURI: "https://example.test/ucm-scheduler/",
+  baseURI: "https://example.test/schedule-viewer/",
   viewportWidth: 402,
   viewportHeight: 874,
   phoneArtwork: true
@@ -18,13 +18,13 @@ assert.equal(phone.fallbackSrc, null);
 assert.match(decodeURIComponent(phone.src), /width="1000" height="1850"/);
 
 const desktop = renderSelectionContent(config, day, {
-  baseURI: "https://example.test/ucm-scheduler/",
+  baseURI: "https://example.test/schedule-viewer/",
   viewportWidth: 1440,
   viewportHeight: 900,
   phoneArtwork: false
 });
 assert.equal(desktop.contentType, "generated-schedule");
-assert.equal(desktop.src, "https://example.test/ucm-scheduler/assets/2026-2027/q1/day-wednesday-vertical.webp");
+assert.equal(desktop.src, "https://example.test/schedule-viewer/assets/2026-2027/q1/day-wednesday-vertical.webp");
 assert.ok(desktop.fallbackSrc.startsWith("data:image/svg+xml"));
 
 const imageSelection = {
@@ -38,17 +38,17 @@ const imageSelection = {
   }
 };
 const image = renderSelectionContent(config, imageSelection, {
-  baseURI: "https://example.test/ucm-scheduler/",
+  baseURI: "https://example.test/schedule-viewer/",
   viewportWidth: 402,
   viewportHeight: 874,
   phoneArtwork: true
 });
 assert.deepEqual(image, {
   contentType: "image",
-  src: "https://example.test/ucm-scheduler/assets/custom/wednesday.gif",
+  src: "https://example.test/schedule-viewer/assets/custom/wednesday.gif",
   fallbackSrc: null,
   fit: "cover",
-  cacheKey: "image:https://example.test/ucm-scheduler/assets/custom/wednesday.gif"
+  cacheKey: "image:https://example.test/schedule-viewer/assets/custom/wednesday.gif"
 });
 
 assert.match(renderGeneratedSvg(config, day), /Miércoles/);
