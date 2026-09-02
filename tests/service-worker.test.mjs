@@ -4,12 +4,32 @@ import vm from "node:vm";
 
 const code = fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const listeners = new Map();
+const deletedCaches = [];
+let claimed = false;
+
 const context = {
   URL,
   console,
+  caches: {
+    async keys() {
+      return [
+        "ucm-scheduler-offline-v1",
+        "schedule-viewer-old",
+        "schedule-viewer-offline-v2-content",
+        "another-app-cache"
+      ];
+    },
+    async delete(name) {
+      deletedCaches.push(name);
+      return true;
+    }
+  },
   self: {
     registration: { scope: "https://example.test/schedule-viewer/" },
     location: { origin: "https://example.test" },
+    clients: {
+      async claim() { claimed = true; }
+    },
     addEventListener(name, callback) { listeners.set(name, callback); }
   }
 };
@@ -60,9 +80,22 @@ assert.deepEqual(paths, [
   "https://example.test/schedule-viewer/assets/states/vacations.webp"
 ]);
 
+let activation = null;
+listeners.get("activate")({
+  waitUntil(promise) { activation = promise; }
+});
+await activation;
+
+assert.deepEqual(deletedCaches.sort(), [
+  "schedule-viewer-old",
+  "ucm-scheduler-offline-v1"
+].sort());
+assert.equal(claimed, true);
+
 assert.equal(context.CACHE_NAME, undefined, "CACHE_NAME es léxico y no necesita exponerse");
 assert.match(code, /schedule-viewer-/);
+assert.match(code, /ucm-scheduler-/);
 assert.match(code, /offline-v2-content/);
 assert.match(code, /content-renderer\.js/);
 
-console.log("service-worker: descubre assets generated + image y filtra data/remotos OK");
+console.log("service-worker: descubre assets y limpia cachés legacy de ucm-scheduler OK");
