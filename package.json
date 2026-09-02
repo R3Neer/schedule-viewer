@@ -1,0 +1,8 @@
+{
+  "name": "ucm-scheduler",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/schedule-core.test.mjs"
+  }
+}
