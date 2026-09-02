@@ -22,13 +22,20 @@ def main():
     shutil.copy2(ROOT / "styles.css", out / "styles.css")
     shutil.copy2(ROOT / "app.js", out / "app.js")
     shutil.copy2(ROOT / "schedule-core.js", out / "schedule-core.js")
+    shutil.copy2(ROOT / "content-renderer.js", out / "content-renderer.js")
     shutil.copy2(ROOT / "service-worker.js", out / "service-worker.js")
     (out / "config").mkdir()
     shutil.copy2(ROOT / "config" / "schedules.json", out / "config" / "schedules.json")
     (out / ".nojekyll").write_text("", encoding="utf-8")
 
+    # User-provided images/GIF/SVG live under assets/. Copy them before rendering so
+    # generated schedule assets always win if a path accidentally collides.
+    source_assets = ROOT / "assets"
+    if source_assets.exists():
+        shutil.copytree(source_assets, out / "assets", dirs_exist_ok=True)
+
     # Desktop/tablet assets remain prerendered WebP. Phone artwork is generated as SVG
-    # by app.js so its aspect ratio can target the real mobile viewport precisely.
+    # by content-renderer.js so its aspect ratio can target the real mobile viewport.
     render_all(ROOT / "config" / "schedules.json", out)
     print(f"Build generado en {out}")
 
