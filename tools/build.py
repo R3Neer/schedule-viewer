@@ -67,6 +67,11 @@ def main():
         "styles.css",
         "app.js",
         "schedule-core.js",
+        "date-core.js",
+        "range-core.js",
+        "view-core.js",
+        "calendar-core.js",
+        "content-core.js",
         "content-renderer.js",
         "service-worker.js",
     ):
