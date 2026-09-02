@@ -41,7 +41,10 @@ jobs:
       - name: Validate schedule configuration
         run: python tools/validate_config.py
 
-      - name: Test schedule selection
+      - name: Test content configuration validator
+        run: python tests/validate_content_config.py
+
+      - name: Test schedule selection and render contracts
         run: npm test
 
       - name: Build static site and schedule assets
