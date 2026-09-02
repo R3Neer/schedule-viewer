@@ -1,75 +1,119 @@
-# UCM Scheduler
+# Schedule Viewer
 
-Horario personal de Samuel para el curso 2026–2027 de Ingeniería Informática (UCM).
+A lightweight, offline-first web app for displaying a timetable based on the current date and screen orientation.
 
-La interfaz mantiene **un único `<img>` visible**. La selección temporal decide qué contenido toca mostrar y una capa de renderizado decide si ese contenido es el horario generado o una imagen configurada (GIF/PNG/JPEG/WebP/SVG/AVIF, etc.). En móvil, el horario normal se genera como SVG adaptado al viewport; en escritorio/tablet se conservan los WebP prerenderizados como ruta principal y el SVG como fallback.
+The runtime is intentionally generic. The repository currently contains Samuel's 2026–2027 Computer Science timetable at UCM as its configuration, but the application itself is not tied to UCM.
 
-## Comportamiento
+## What it does
 
-- Móvil estrecho en vertical: vista del día.
-- Horizontal o pantalla ancha: vista semanal.
-- Festivos, fines de semana, días no lectivos y vacaciones en vertical: `Sin clases hoy`.
-- Vacaciones en horizontal: `Vacaciones`, salvo cuando el calendario indique que ya debe mostrarse el siguiente cuatrimestre.
-- Funciona offline después de una primera apertura con conexión mediante Service Worker.
-- Zona horaria: `Europe/Madrid`.
+- Portrait mobile view shows the current day.
+- Landscape mobile, tablet and desktop views show the week.
+- Academic calendars support terms, holidays, non-teaching days and vacation periods.
+- The view changes automatically when the phone is rotated.
+- Custom visual content can replace generated timetable views.
+- GIF, PNG, JPEG, WebP, SVG and AVIF work through the same image renderer.
+- A Service Worker precaches the app and local visual assets so it can reopen offline after the first online load.
+- The UI deliberately keeps a single visible `<img>` and no permanent navigation controls.
 
-## Fuente de verdad
+## Architecture
 
-`config/schedules.json` contiene:
+The application separates **when something should be shown** from **how it is rendered**:
 
-- calendario académico, cuatrimestres y vacaciones;
-- asignaturas y sesiones;
-- aulas y grupos;
-- festivos y días no lectivos;
-- rutas de assets;
-- overrides opcionales de contenido visual.
+```text
+date + orientation
+       ↓
+schedule-core.js
+       ↓
+ContentDescriptor
+       ↓
+content-renderer.js
+   ┌───────────────┐
+   │               │
+generated       image
+schedule        content
+   │               │
+  SVG        GIF/PNG/...
+   └───────┬───────┘
+           ↓
+         <img>
+```
 
-Los WebP se generan de forma reproducible con `tools/render_assets.py`. La configuración `content` es opcional: si no existe, el comportamiento y el aspecto del horario son los actuales.
+`generated-schedule` keeps the current timetable behaviour. On phones the timetable is rendered dynamically as SVG to fit the viewport; desktop and tablet use reproducibly generated WebP assets with SVG fallback.
 
-La especificación del contenido configurable está en [`docs/content-config.md`](docs/content-config.md).
+`image` lets a day, week or state point directly to visual content without changing the calendar logic.
 
-## Desarrollo local
+The configurable content format is documented in [`docs/content-config.md`](docs/content-config.md).
+
+## Configuration
+
+`config/schedules.json` is the source of truth for:
+
+- academic years and terms;
+- subjects and weekly sessions;
+- rooms and groups;
+- holidays and non-teaching days;
+- vacation periods and term transitions;
+- generated asset paths;
+- optional custom visual content.
+
+The UCM-specific timetable and official source URLs live only in this configuration layer.
+
+## Offline support
+
+The Service Worker precaches:
+
+- the HTML, CSS and JavaScript runtime;
+- `config/schedules.json`;
+- generated timetable WebP assets;
+- local custom images referenced by the configuration.
+
+Navigation and configuration use network-first behaviour with cached fallback. Static runtime files and images use cache-first behaviour.
+
+Changing the cache namespace/version replaces stale app caches on activation.
+
+## Development
 
 ```bash
 python -m pip install -r requirements.txt
 npm install
 python tools/validate_config.py
+python tests/validate_content_config.py
 npm test
 python tools/build.py --out dist
 npm run test:e2e
 ```
 
-Los E2E levantan `dist/` y abren la web en Chromium. Comprueban renderizado real, cambio vertical/horizontal, contenido GIF/PNG y recarga offline. Si la página no llega a mostrar una imagen válida, el test falla.
+The end-to-end suite starts the built `dist/` site and opens it in Chromium. The CI does not deploy until the built application itself has rendered successfully in a real browser.
 
-Para probar manualmente una fecha concreta puede utilizarse `?date=YYYY-MM-DD`, por ejemplo:
+For development and tests, a date can be overridden with:
 
 ```text
 http://localhost:4173/?date=2027-02-03
 ```
 
-La fecha manual no aparece como control en la interfaz; existe únicamente para pruebas y previsualización.
+The date override is not exposed as a normal UI control.
 
-## GitHub Pages
+## Tests and CI
 
-El workflow `.github/workflows/pages.yml` valida, prueba, construye `dist/`, abre la web con Playwright y solo después despliega el mismo artefacto que pasó los tests.
+GitHub Actions currently verifies, before deployment:
 
-En un repositorio nuevo GitHub puede exigir una activación inicial en:
+- structural calendar validation;
+- valid and invalid `ContentDescriptor` contracts;
+- schedule/content selection unit tests;
+- renderer contracts;
+- Service Worker asset discovery;
+- a reproducible production build;
+- real browser rendering on phone and desktop viewports;
+- portrait ↔ landscape switching without reload;
+- absence of unwanted mobile scrolling;
+- GIF and PNG custom content;
+- offline reload on mobile;
+- offline WebP delivery on desktop.
 
-`Settings → Pages → Source → GitHub Actions`
+Only the same `dist/` artifact that passes those checks is uploaded to GitHub Pages.
 
-Después, cualquier cambio en `main` vuelve a desplegar automáticamente.
+## Adding another timetable
 
-## Actualizar un curso futuro
+The runtime should not need to change for another university or academic year. Add or replace the relevant calendar, subjects, sessions and optional content in `config/schedules.json`, then run the validator and tests.
 
-1. Añadir el curso y sus términos a `config/schedules.json`.
-2. Definir asignaturas, sesiones y calendario académico.
-3. Mantener las rutas de los assets generados.
-4. Añadir opcionalmente contenido personalizado en `content` y sus ficheros bajo `assets/`.
-5. Ejecutar validador, tests y build.
-6. Hacer push. GitHub Actions repite esas comprobaciones antes de desplegar.
-
-No debería ser necesario modificar la lógica de la app para añadir otro formato de imagen compatible con `<img>`.
-
-## Fuentes oficiales 2026–2027
-
-Las URLs de cada asignatura están guardadas junto a sus datos en `config/schedules.json` para poder verificar cambios. El calendario general procede de la Facultad de Informática UCM.
+The current repository remains a configured UCM instance, while the runtime is designed to support other schedules without UCM-specific code.
