@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "ucm-scheduler-";
-const CACHE_NAME = `${CACHE_PREFIX}offline-v1`;
+const CACHE_NAME = `${CACHE_PREFIX}offline-v2-content`;
 const SCOPE = self.registration.scope;
 
 const CORE_PATHS = [
@@ -7,25 +7,52 @@ const CORE_PATHS = [
   "./index.html",
   "./styles.css",
   "./app.js",
-  "./schedule-core.js"
+  "./schedule-core.js",
+  "./content-renderer.js"
 ];
 
 function scoped(path) {
   return new URL(path, SCOPE).href;
 }
 
+function addCustomContentPath(paths, descriptor) {
+  if (descriptor == null) return;
+  const src = typeof descriptor === "string"
+    ? descriptor
+    : descriptor?.type === "image"
+      ? descriptor.src
+      : null;
+  if (typeof src !== "string" || !src || /^(?:data|blob):/i.test(src)) return;
+
+  try {
+    const url = new URL(src, SCOPE);
+    if (url.origin === self.location.origin) paths.add(url.href);
+  } catch (error) {
+    console.warn("Ruta de contenido personalizada inválida:", src, error);
+  }
+}
+
 function scheduleAssetPaths(config) {
   const paths = new Set();
 
   for (const path of Object.values(config.states ?? {})) {
-    if (typeof path === "string" && path) paths.add(path);
+    if (typeof path === "string" && path) paths.add(scoped(path));
+  }
+
+  for (const descriptor of Object.values(config.content?.states ?? {})) {
+    addCustomContentPath(paths, descriptor);
   }
 
   for (const year of config.academicYears ?? []) {
     for (const term of year.terms ?? []) {
-      if (term.assets?.week) paths.add(term.assets.week);
+      if (term.assets?.week) paths.add(scoped(term.assets.week));
       for (const path of Object.values(term.assets?.days ?? {})) {
-        if (path) paths.add(path);
+        if (path) paths.add(scoped(path));
+      }
+
+      addCustomContentPath(paths, term.content?.week);
+      for (const descriptor of Object.values(term.content?.days ?? {})) {
+        addCustomContentPath(paths, descriptor);
       }
     }
   }
@@ -33,14 +60,13 @@ function scheduleAssetPaths(config) {
   return [...paths];
 }
 
-async function cacheOptionalAssets(cache, paths) {
-  await Promise.all(paths.map(async (path) => {
+async function cacheOptionalAssets(cache, urls) {
+  await Promise.all(urls.map(async (url) => {
     try {
-      const url = scoped(path);
       const response = await fetch(url, { cache: "reload" });
       if (response.ok) await cache.put(url, response.clone());
     } catch (error) {
-      console.warn("No se pudo precachear un asset opcional:", path, error);
+      console.warn("No se pudo precachear un asset opcional:", url, error);
     }
   }));
 }
