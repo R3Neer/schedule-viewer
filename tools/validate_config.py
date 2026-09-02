@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config" / "schedules.json"
 DAYS = {"monday", "tuesday", "wednesday", "thursday", "friday"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+IMAGE_FITS = {"contain", "cover", "fill", "none", "scale-down"}
+GENERATED_VIEWS = {"day", "week", "no-class", "vacations"}
 
 
 def minutes(value: str) -> int:
@@ -20,6 +23,64 @@ def valid_date(value: str) -> bool:
     return bool(DATE_RE.match(value or ""))
 
 
+def is_local_asset(src: str) -> bool:
+    parsed = urlparse(src)
+    return not parsed.scheme and not src.startswith("//")
+
+
+def validate_image_src(src: str, location: str, generated_assets: set[str], errors: list[str]) -> None:
+    if not isinstance(src, str) or not src:
+        errors.append(f"{location}: image requiere src no vacío")
+        return
+    if src.startswith(("data:", "blob:")):
+        return
+    if is_local_asset(src) and src not in generated_assets and not (ROOT / src).is_file():
+        errors.append(f"{location}: no existe el asset local {src}")
+
+
+def validate_content(
+    descriptor,
+    location: str,
+    errors: list[str],
+    generated_assets: set[str],
+    expected_view: str | None = None,
+) -> None:
+    if isinstance(descriptor, str):
+        validate_image_src(descriptor, location, generated_assets, errors)
+        return
+
+    if not isinstance(descriptor, dict):
+        errors.append(f"{location}: el contenido debe ser una cadena o un objeto")
+        return
+
+    content_type = descriptor.get("type")
+    if content_type == "image":
+        validate_image_src(descriptor.get("src"), location, generated_assets, errors)
+        fit = descriptor.get("fit", "contain")
+        if fit not in IMAGE_FITS:
+            errors.append(f"{location}: fit no soportado: {fit}")
+        alt = descriptor.get("alt")
+        if alt is not None and not isinstance(alt, str):
+            errors.append(f"{location}: alt debe ser texto")
+        return
+
+    if content_type == "generated-schedule":
+        view = descriptor.get("view")
+        if view is not None and view not in GENERATED_VIEWS:
+            errors.append(f"{location}: view generada desconocida: {view}")
+        if expected_view and view is not None and view != expected_view:
+            errors.append(f"{location}: view debe ser {expected_view}, no {view}")
+        alt = descriptor.get("alt")
+        if alt is not None and not isinstance(alt, str):
+            errors.append(f"{location}: alt debe ser texto")
+        fallback = descriptor.get("fallbackSrc")
+        if fallback is not None:
+            validate_image_src(fallback, f"{location}.fallbackSrc", generated_assets, errors)
+        return
+
+    errors.append(f"{location}: type desconocido: {content_type!r}")
+
+
 def main():
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
     errors = []
@@ -28,6 +89,26 @@ def main():
         errors.append("version debe ser 2")
     if cfg.get("timezone") != "Europe/Madrid":
         errors.append("timezone debe ser Europe/Madrid")
+
+    generated_assets = set()
+    for path in cfg.get("states", {}).values():
+        if isinstance(path, str) and path:
+            generated_assets.add(path)
+    for year in cfg.get("academicYears", []):
+        for term in year.get("terms", []):
+            assets = term.get("assets", {})
+            if assets.get("week"):
+                generated_assets.add(assets["week"])
+            generated_assets.update(path for path in assets.get("days", {}).values() if path)
+
+    state_content = cfg.get("content", {}).get("states", {})
+    unknown_states = set(state_content) - {"noClassToday", "vacations"}
+    if unknown_states:
+        errors.append(f"Estados de contenido desconocidos: {sorted(unknown_states)}")
+    if "noClassToday" in state_content:
+        validate_content(state_content["noClassToday"], "content.states.noClassToday", errors, generated_assets, "no-class")
+    if "vacations" in state_content:
+        validate_content(state_content["vacations"], "content.states.vacations", errors, generated_assets, "vacations")
 
     seen_years = set()
     for year in cfg.get("academicYears", []):
@@ -104,7 +185,8 @@ def main():
                 errors.append(f"{period_id}: nextTermId desconocido en {year_id}: {next_term}")
 
         for term in schedules:
-            key = (year_id, term.get("id"))
+            term_id = term.get("id")
+            key = (year_id, term_id)
             subjects = term.get("subjects", {})
             assets = term.get("assets", {})
             if not assets.get("week"):
@@ -112,6 +194,22 @@ def main():
             missing_days = DAYS - set(assets.get("days", {}))
             if missing_days:
                 errors.append(f"Faltan assets diarios en {key}: {sorted(missing_days)}")
+
+            content = term.get("content", {})
+            unknown_content_keys = set(content) - {"week", "days"}
+            if unknown_content_keys:
+                errors.append(f"Claves content desconocidas en {key}: {sorted(unknown_content_keys)}")
+            if "week" in content:
+                validate_content(content["week"], f"{year_id}/{term_id}.content.week", errors, generated_assets, "week")
+            custom_days = content.get("days", {})
+            if not isinstance(custom_days, dict):
+                errors.append(f"{year_id}/{term_id}.content.days debe ser un objeto")
+            else:
+                unknown_days = set(custom_days) - DAYS
+                if unknown_days:
+                    errors.append(f"Días content desconocidos en {key}: {sorted(unknown_days)}")
+                for day, descriptor in custom_days.items():
+                    validate_content(descriptor, f"{year_id}/{term_id}.content.days.{day}", errors, generated_assets, "day")
 
             per_day = {day: [] for day in DAYS}
             for session in term.get("sessions", []):
