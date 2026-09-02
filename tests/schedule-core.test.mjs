@@ -91,8 +91,8 @@ const customPaths = collectCustomContentAssetPaths(custom).sort();
 assert.deepEqual(customPaths, [
   "assets/custom/no-class.svg",
   "assets/custom/thursday.png",
-  "assets/custom/week.avif",
-  "assets/custom/wednesday.gif"
+  "assets/custom/wednesday.gif",
+  "assets/custom/week.avif"
 ]);
 
 console.log("schedule-core: 19 casos/contratos OK");
