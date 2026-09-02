@@ -10,7 +10,7 @@
   <script type="importmap">
     {
       "imports": {
-        "./schedule-core.js": "./schedule-core.js?v=20260902-calendar-v2-fix1"
+        "./schedule-core.js": "./schedule-core.js?v=20260902-offline-v1"
       }
     }
   </script>
@@ -20,6 +20,24 @@
     <img id="schedule-image" class="schedule-image" alt="Horario" decoding="async">
     <p id="error-message" class="error-message" role="alert" hidden></p>
   </main>
-  <script type="module" src="./app.js?v=20260902-calendar-v2-fix1"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", async () => {
+        try {
+          await navigator.serviceWorker.register("./service-worker.js", {
+            scope: "./",
+            updateViaCache: "none"
+          });
+          await navigator.serviceWorker.ready;
+          document.documentElement.dataset.offlineReady = "1";
+        } catch (error) {
+          console.error("No se pudo activar el modo offline.", error);
+          document.documentElement.dataset.offlineReady = "0";
+        }
+      });
+    }
+  </script>
+  <script type="module" src="./app.js?v=20260902-offline-v1"></script>
 </body>
 </html>

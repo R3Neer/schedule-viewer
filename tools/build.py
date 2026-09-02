@@ -22,6 +22,7 @@ def main():
     shutil.copy2(ROOT / "styles.css", out / "styles.css")
     shutil.copy2(ROOT / "app.js", out / "app.js")
     shutil.copy2(ROOT / "schedule-core.js", out / "schedule-core.js")
+    shutil.copy2(ROOT / "service-worker.js", out / "service-worker.js")
     (out / "config").mkdir()
     shutil.copy2(ROOT / "config" / "schedules.json", out / "config" / "schedules.json")
     (out / ".nojekyll").write_text("", encoding="utf-8")
