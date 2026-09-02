@@ -8,7 +8,7 @@ const context = {
   URL,
   console,
   self: {
-    registration: { scope: "https://example.test/ucm-scheduler/" },
+    registration: { scope: "https://example.test/schedule-viewer/" },
     location: { origin: "https://example.test" },
     addEventListener(name, callback) { listeners.set(name, callback); }
   }
@@ -51,16 +51,17 @@ const config = {
 
 const paths = [...context.scheduleAssetPaths(config)].sort();
 assert.deepEqual(paths, [
-  "https://example.test/ucm-scheduler/assets/custom/monday.gif",
-  "https://example.test/ucm-scheduler/assets/custom/no-class.gif",
-  "https://example.test/ucm-scheduler/assets/custom/week.avif",
-  "https://example.test/ucm-scheduler/assets/q1/monday.webp",
-  "https://example.test/ucm-scheduler/assets/q1/week.webp",
-  "https://example.test/ucm-scheduler/assets/states/no-class.webp",
-  "https://example.test/ucm-scheduler/assets/states/vacations.webp"
+  "https://example.test/schedule-viewer/assets/custom/monday.gif",
+  "https://example.test/schedule-viewer/assets/custom/no-class.gif",
+  "https://example.test/schedule-viewer/assets/custom/week.avif",
+  "https://example.test/schedule-viewer/assets/q1/monday.webp",
+  "https://example.test/schedule-viewer/assets/q1/week.webp",
+  "https://example.test/schedule-viewer/assets/states/no-class.webp",
+  "https://example.test/schedule-viewer/assets/states/vacations.webp"
 ]);
 
 assert.equal(context.CACHE_NAME, undefined, "CACHE_NAME es léxico y no necesita exponerse");
+assert.match(code, /schedule-viewer-/);
 assert.match(code, /offline-v2-content/);
 assert.match(code, /content-renderer\.js/);
 
