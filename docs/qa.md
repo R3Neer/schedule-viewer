@@ -1,61 +1,60 @@
-# QA — UCM Scheduler
+# QA — Schedule Viewer
 
-## Validación automática
+## Automated validation
 
-Ejecutada antes del push:
+The deployment workflow validates the real production path before GitHub Pages receives anything.
 
-```text
-validate-config: OK
-schedule-core: 10 casos OK
-assets-webp: OK
-```
+Current CI stages:
 
-`tools/validate_config.py` comprueba fechas, horas, referencias de asignaturas, cinco días por cuatrimestre y solapamientos.
+1. validate `config/schedules.json`;
+2. verify valid and invalid configurable-content contracts;
+3. run schedule-selection, renderer and Service Worker unit tests;
+4. build `dist/` and all generated WebP assets;
+5. install Chromium;
+6. open the built web app with Playwright;
+7. deploy only if every previous step is green.
 
-## Casos de selección cubiertos
+## Schedule-selection coverage
 
-| Fecha | Formato | Resultado esperado |
-|---|---|---|
-| 2026-09-02 | vertical estrecho | Sin clases hoy |
-| 2026-09-02 | horizontal/ancho | Próxima semana: Q1 |
-| 2026-09-09 | vertical estrecho | Miércoles Q1 |
-| 2026-09-12 | vertical estrecho | Sin clases hoy |
-| 2026-09-12 | horizontal/ancho | Semana Q1 |
-| 2026-10-12 | vertical estrecho | Sin clases hoy por festivo |
-| 2027-01-10 | horizontal/ancho | Próxima semana: Q2 |
-| 2027-02-03 | vertical estrecho | Miércoles Q2 |
-| 2027-03-22 | vertical estrecho | Sin clases hoy por periodo no lectivo |
-| 2027-07-10 | horizontal/ancho | Vacaciones |
+The unit suite covers, among other cases:
 
-## Pruebas visuales en navegador headless
+- dates before the first term;
+- active weekdays;
+- weekends;
+- ordinary holidays;
+- university non-teaching days;
+- the inter-term vacation period;
+- preview of the next term from the configured promotion date;
+- the second term;
+- Easter vacation;
+- summer vacation;
+- custom image overrides for day, week and state content;
+- automatic discovery of local custom assets for offline caching.
 
-Se renderizaron y revisaron capturas con el CSS real y los WebP generados para:
+## Browser E2E coverage
 
-- escritorio `1440 × 900`, Q1 semanal;
-- móvil vertical `390 × 844`, Q1 miércoles;
-- móvil vertical `390 × 844`, Q2 jueves;
-- móvil vertical `390 × 844`, estado Sin clases hoy;
-- móvil horizontal `844 × 390`, Q1 semanal;
-- escritorio `1440 × 900`, estado Vacaciones.
+Playwright opens the exact `dist/` artifact that will later be deployed and verifies:
 
-Ajuste derivado de estas pruebas: en móvil horizontal la semana usa todo el ancho y admite un scroll vertical corto, en lugar de reducirse hasta perder legibilidad.
+- iPhone portrait renders the expected daily timetable;
+- a holiday renders `Sin clases hoy`;
+- iPhone landscape renders vacations and the next-term transition correctly;
+- rotating portrait → landscape → portrait changes the view without reloading;
+- neither phone orientation introduces unwanted viewport scrolling;
+- a custom animated GIF renders as `image` content;
+- a custom PNG renders as weekly `image` content;
+- the mobile app reloads successfully after the network is cut;
+- desktop reloads offline and still receives the cached weekly WebP.
 
-## Patrón diario
+Each rendered image must be visible, complete and have the expected natural dimensions. The error box must remain hidden.
 
-Todos los días generados tienen `1080 × 2160 px`. Dentro de cada cuatrimestre comparten exactamente:
+## Runtime invariants
 
-- misma escala horaria;
-- mismas filas;
-- misma cabecera;
-- mismos márgenes;
-- misma geometría de los bloques.
+- The DOM keeps a single visible schedule/content `<img>`.
+- Calendar selection is separated from visual rendering.
+- `generated-schedule` content can render dynamically as SVG.
+- `image` content is passed directly to the browser, so supported image formats preserve native behaviour, including animation.
+- The Service Worker caches local content by URL rather than by image extension.
 
-Los huecos no se eliminan ni se compactan.
+## Current configured instance
 
-## Carga de imágenes
-
-`index.html` contiene un único elemento `<img>`. `app.js` resuelve primero fecha y formato y solo entonces asigna el `src` del asset seleccionado. No se insertan imágenes alternativas ocultas en el DOM.
-
-## Pages
-
-Commit de verificación lanzado tras habilitar GitHub Pages para comprobar el despliegue real.
+The production configuration in this repository is still Samuel's 2026–2027 UCM Computer Science timetable. UCM-specific dates, subjects, rooms and source URLs belong to `config/schedules.json`; the runtime itself is intended to remain university-agnostic.
