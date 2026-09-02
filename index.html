@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#F4F7FB">
   <meta name="color-scheme" content="light">
-  <title>Horario UCM</title>
-  <link rel="stylesheet" href="./styles.css?v=20260902-iphone17-2">
+  <title>Schedule Viewer</title>
+  <link rel="stylesheet" href="./styles.css?v=20260903-v3">
   <script type="importmap">
     {
       "imports": {
-        "./schedule-core.js": "./schedule-core.js?v=20260902-content-v1",
-        "./content-renderer.js": "./content-renderer.js?v=20260902-content-v1"
+        "./schedule-core.js": "./schedule-core.js?v=20260903-v3",
+        "./content-renderer.js": "./content-renderer.js?v=20260903-v3"
       }
     }
   </script>
 </head>
 <body>
   <main class="schedule-shell">
-    <img id="schedule-image" class="schedule-image" alt="Horario" decoding="async">
+    <img id="schedule-image" class="schedule-image" alt="Schedule Viewer" decoding="async">
     <p id="error-message" class="error-message" role="alert" hidden></p>
   </main>
 
@@ -39,6 +39,6 @@
       });
     }
   </script>
-  <script type="module" src="./app.js?v=20260902-content-v1"></script>
+  <script type="module" src="./app.js?v=20260903-v3"></script>
 </body>
 </html>
