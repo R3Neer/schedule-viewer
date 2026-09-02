@@ -55,3 +55,7 @@ Los huecos no se eliminan ni se compactan.
 ## Carga de imágenes
 
 `index.html` contiene un único elemento `<img>`. `app.js` resuelve primero fecha y formato y solo entonces asigna el `src` del asset seleccionado. No se insertan imágenes alternativas ocultas en el DOM.
+
+## Pages
+
+Commit de verificación lanzado tras habilitar GitHub Pages para comprobar el despliegue real.
