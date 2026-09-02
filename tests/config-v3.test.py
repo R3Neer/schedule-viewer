@@ -174,9 +174,9 @@ priority_periods["academic_years"][0]["calendar"]["periods"] = [
     },
     {
         "id": "b", "type": "vacation", "start": "2026-10-05", "end": "2026-10-15",
-        "priority": 2, "imae": {"src": "assets/b.webp"}
+        "priority": 2, "image": {"src": "assets/b.webp"}
     },
 ]
-assert len(compile_config_data(priority_periodK)["academicYears"][0]["calendar"]["periods"]) == 2
+assert len(compile_config_data(priority_periods)["academicYears"][0]["calendar"]["periods"]) == 2
 
 print("config-v3: YAML real + 20 contratos positivos/negativos de compilación y validación OK")
