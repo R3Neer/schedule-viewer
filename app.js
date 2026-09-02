@@ -1,29 +1,49 @@
-import { getDateInTimezone, selectScheduleContent } from "./schedule-core.js";
+import {
+  desktopContextMatches,
+  desktopToggleTarget,
+  getDateInTimezone,
+  selectScheduleContent
+} from "./schedule-core.js";
 import { renderSelectionContent } from "./content-renderer.js";
 
 const image = document.querySelector("#schedule-image");
 const errorBox = document.querySelector("#error-message");
+
 let config = null;
 let currentKey = null;
 let currentRendered = null;
+let currentSelection = null;
+let manualViewId = null;
 let resizeTimer = null;
 
 function getRequestedDate() {
   const override = new URLSearchParams(window.location.search).get("date");
-  if (override && config.runtime?.allowDateOverride && /^\d{4}-\d{2}-\d{2}$/.test(override)) return override;
-  return getDateInTimezone(config.timezone);
+  if (
+    override &&
+    config.runtime?.allowDateOverride &&
+    /^\d{4}-\d{2}-\d{2}$/.test(override)
+  ) return override;
+  return getDateInTimezone(config.app?.timezone ?? config.timezone);
 }
 
-function isPortraitNarrow() {
-  return window.innerWidth < config.runtime.mobileVerticalMaxWidth && window.innerHeight >= window.innerWidth;
+function pointerType() {
+  if (window.matchMedia?.("(pointer: fine)").matches) return "fine";
+  if (window.matchMedia?.("(pointer: coarse)").matches) return "coarse";
+  return "any";
 }
 
-function isPhoneLandscape() {
-  return window.innerWidth > window.innerHeight && window.innerWidth <= 950 && window.innerHeight <= 520;
+function viewportContext() {
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    orientation: window.innerWidth > window.innerHeight ? "landscape" : "portrait",
+    pointer: pointerType()
+  };
 }
 
-function usePhoneArtwork() {
-  return isPortraitNarrow() || isPhoneLandscape();
+function effectiveManualView(viewport) {
+  if (!desktopContextMatches(config, viewport)) return null;
+  return manualViewId ?? config.desktop?.defaultView ?? null;
 }
 
 function useFallback() {
@@ -37,22 +57,38 @@ function useFallback() {
 
 function render() {
   const date = getRequestedDate();
+  const viewport = viewportContext();
+
+  if (manualViewId && !desktopContextMatches(config, viewport)) {
+    manualViewId = null;
+  }
+
   const selection = selectScheduleContent(config, {
     date,
-    portraitNarrow: isPortraitNarrow()
+    viewport,
+    manualViewId: effectiveManualView(viewport)
   });
+  const view = config.views[selection.viewId];
+  const phoneArtwork = view?.renderer?.artwork === "phone";
 
   const rendered = renderSelectionContent(config, selection, {
     baseURI: document.baseURI,
-    viewportWidth: window.innerWidth,
-    viewportHeight: window.innerHeight,
-    phoneArtwork: usePhoneArtwork()
+    viewportWidth: viewport.width,
+    viewportHeight: viewport.height,
+    phoneArtwork
   });
 
+  currentSelection = selection;
   document.documentElement.dataset.view = selection.kind;
-  document.documentElement.dataset.phone = usePhoneArtwork() ? "1" : "0";
+  document.documentElement.dataset.viewProfile = selection.viewId;
+  document.documentElement.dataset.rangeType = selection.range.type;
+  document.documentElement.dataset.rangeStart = selection.range.start;
+  document.documentElement.dataset.rangeEnd = selection.range.end;
+  document.documentElement.dataset.calendarStatus = selection.evaluation?.status ?? "unknown";
+  document.documentElement.dataset.phone = phoneArtwork ? "1" : "0";
   document.documentElement.dataset.contentType = rendered.contentType;
-  document.title = selection.kind === "day" ? `Horario · ${date}` : "Horario UCM";
+  document.documentElement.dataset.manualView = manualViewId ? "1" : "0";
+  document.title = `${config.app?.title ?? "Schedule Viewer"} · ${date}`;
 
   image.alt = selection.alt;
   image.style.objectFit = rendered.fit;
@@ -71,22 +107,61 @@ function showError(error) {
   console.error(error);
   image.hidden = true;
   errorBox.hidden = false;
-  errorBox.textContent = "No he podido cargar el horario. Revisa la configuración o vuelve a intentarlo.";
+  errorBox.textContent = "No he podido cargar la vista. Revisa la configuración o vuelve a intentarlo.";
+}
+
+function isEditableOrInteractive(target) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest(
+    'input, textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"]), ' +
+    '[role="button"], [role="checkbox"], [role="radio"], [role="switch"], [role="slider"], ' +
+    '[role="spinbutton"], [role="combobox"], [role="listbox"], [role="menuitem"]'
+  ));
+}
+
+function matchesToggleShortcut(event) {
+  const configured = config.desktop?.shortcuts?.toggleView?.key ?? "Space";
+  if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return false;
+  if (event.defaultPrevented || event.repeat) return false;
+  if (configured === "Space") return event.code === "Space" || event.key === " ";
+  return event.code === configured || event.key === configured;
+}
+
+function onKeyDown(event) {
+  if (!config || !matchesToggleShortcut(event) || isEditableOrInteractive(event.target)) return;
+  const viewport = viewportContext();
+  const currentViewId = currentSelection?.viewId ?? config.desktop?.defaultView;
+  const target = desktopToggleTarget(config, currentViewId, viewport);
+  if (!target) return;
+  event.preventDefault();
+  manualViewId = target;
+  try {
+    render();
+  } catch (error) {
+    showError(error);
+  }
 }
 
 async function init() {
   try {
-    const response = await fetch("./config/schedules.json", { cache: "no-cache" });
+    const response = await fetch("./config/schedule.json", { cache: "no-cache" });
     if (!response.ok) throw new Error(`Error cargando configuración: ${response.status}`);
     config = await response.json();
+
     image.addEventListener("error", useFallback);
-    render();
+    window.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", () => {
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(() => {
-        try { render(); } catch (error) { showError(error); }
+        try {
+          render();
+        } catch (error) {
+          showError(error);
+        }
       }, 100);
     });
+
+    render();
   } catch (error) {
     showError(error);
   }
