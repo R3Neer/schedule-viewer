@@ -17,16 +17,17 @@ def main():
         shutil.rmtree(out)
     out.mkdir(parents=True)
 
-    # Copy static runtime files.
+    # Copy the same runtime that also works when Pages publishes the repository root.
     shutil.copy2(ROOT / "index.html", out / "index.html")
     shutil.copy2(ROOT / "styles.css", out / "styles.css")
-    shutil.copy2(ROOT / "src" / "app.js", out / "app.js")
-    shutil.copy2(ROOT / "src" / "schedule-core.js", out / "schedule-core.js")
+    shutil.copy2(ROOT / "app.js", out / "app.js")
+    shutil.copy2(ROOT / "schedule-core.js", out / "schedule-core.js")
     (out / "config").mkdir()
     shutil.copy2(ROOT / "config" / "schedules.json", out / "config" / "schedules.json")
     (out / ".nojekyll").write_text("", encoding="utf-8")
 
-    # Assets are rendered from the same structured schedule data.
+    # Desktop/tablet assets remain prerendered WebP. Phone artwork is generated as SVG
+    # by app.js so its aspect ratio can target the real mobile viewport precisely.
     render_all(ROOT / "config" / "schedules.json", out)
     print(f"Build generado en {out}")
 
