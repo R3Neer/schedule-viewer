@@ -1,4 +1,5 @@
 const CACHE_PREFIX = "schedule-viewer-";
+const LEGACY_CACHE_PREFIXES = ["ucm-scheduler-"];
 const CACHE_NAME = `${CACHE_PREFIX}offline-v2-content`;
 const SCOPE = self.registration.scope;
 
@@ -92,9 +93,10 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
+    const ownedPrefixes = [CACHE_PREFIX, ...LEGACY_CACHE_PREFIXES];
     await Promise.all(
       names
-        .filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
+        .filter((name) => name !== CACHE_NAME && ownedPrefixes.some((prefix) => name.startsWith(prefix)))
         .map((name) => caches.delete(name))
     );
     await self.clients.claim();
