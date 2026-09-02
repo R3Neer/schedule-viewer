@@ -47,7 +47,7 @@ async function waitForServiceWorker(page) {
   });
 
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
-  await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("ucm-scheduler-offline-v2-content"))).toBe(true);
+  await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-v2-content"))).toBe(true);
 }
 
 async function useCustomConfig(page, mutate) {
