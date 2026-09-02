@@ -1,239 +1,204 @@
-# Especificación — UCM Scheduler
+# Especificación — Schedule Viewer
 
 ## 1. Objetivo
 
-Aplicación web estática para mostrar automáticamente el horario personal del curso según:
+Aplicación web estática, ligera y offline-first para mostrar contenido visual según fecha, calendario y orientación de pantalla.
 
-- fecha actual en `Europe/Madrid`;
-- calendario lectivo;
-- festivos y días no lectivos;
-- tamaño y orientación de pantalla.
+La instancia incluida actualmente representa el horario 2026–2027 de Ingeniería Informática de la UCM, pero la lógica de ejecución no debe depender de UCM.
 
-El navegador debe cargar **una única imagen de horario** en cada estado.
+La aplicación mantiene un único elemento `<img>` visible. La selección temporal decide **qué contenido corresponde** y una capa independiente decide **cómo representarlo**.
 
-## 2. Modos de visualización
+## 2. Selección temporal
 
-### Móvil estrecho en vertical
+La fuente de verdad es `config/schedules.json`.
 
-Muestra la vista del **día actual**.
+La lógica debe poder resolver:
 
-- Día lectivo: horario diario correspondiente.
-- Sábado o domingo: `Sin clases hoy`.
-- Festivo: `Sin clases hoy`.
-- Día no lectivo: `Sin clases hoy`.
-- Vacaciones o fecha fuera de un cuatrimestre: `Sin clases hoy`.
+- curso académico y cuatrimestre activo;
+- día de la semana;
+- fines de semana;
+- festivos;
+- días no lectivos;
+- vacaciones;
+- transición y previsualización del siguiente cuatrimestre;
+- orientación diaria o semanal.
 
-La regla responsive inicial es:
+En móvil estrecho vertical se muestra normalmente el contenido diario. En horizontal, tablet o escritorio se muestra normalmente el contenido semanal.
 
-- ancho `< 760 px`;
-- orientación vertical.
+## 3. Modelo de contenido
 
-### Horizontal o pantalla ancha
+La salida de la selección temporal se normaliza como un `ContentDescriptor`.
 
-Muestra una **vista semanal**.
+### `generated-schedule`
 
-- Dentro de un cuatrimestre: horario semanal del cuatrimestre activo.
-- Fuera de un cuatrimestre: si existe en configuración un cuatrimestre posterior con horario semanal, se muestra ese próximo horario.
-- Si no existe ningún horario futuro configurado: `Vacaciones`.
+Representa el horario generado por la propia aplicación.
 
-Por tanto, durante unas vacaciones el horario siguiente aparece automáticamente en cuanto ese siguiente cuatrimestre o curso se incorpora al fichero de configuración. No existe una fecha de promoción hardcodeada.
+- En móvil se genera como SVG adaptado al viewport.
+- En escritorio/tablet se utiliza el WebP prerenderizado como ruta principal y SVG como fallback.
 
-### Móvil en horizontal
+### `image`
 
-Se muestra la semana completa. Para conservar legibilidad, la imagen usa todo el ancho y puede requerir un pequeño scroll vertical.
+Representa contenido visual externo al renderer de horario:
 
-## 3. Patrón visual diario
+```json
+{
+  "type": "image",
+  "src": "assets/custom/wednesday.gif",
+  "alt": "GIF del miércoles",
+  "fit": "contain"
+}
+```
 
-Todas las imágenes diarias de un mismo cuatrimestre deben tener:
+El navegador recibe directamente el `src`. Por tanto GIF, PNG, JPEG, WebP, SVG, AVIF y otros formatos admitidos por `<img>` no requieren lógica específica por extensión.
 
-- exactamente el mismo tamaño de lienzo;
-- exactamente la misma cabecera;
-- exactamente la misma escala temporal;
-- las mismas posiciones para cada hora;
-- la misma tipografía, colores, márgenes y estructura.
+La configuración también admite una cadena como forma abreviada de `image`.
 
-Los huecos entre clases permanecen visibles. La composición **no se recoloca** para compactar días con pocas asignaturas.
+La especificación completa del formato está en `docs/content-config.md`.
 
-Esto hace que el ojo aprenda una geometría estable.
+## 4. Separación de responsabilidades
 
-### Tamaño implementado
+```text
+fecha + orientación
+       ↓
+schedule-core.js
+       ↓
+ContentDescriptor
+       ↓
+content-renderer.js
+   ┌───────────────┐
+   │               │
+generated       image
+schedule        content
+   │               │
+  SVG        GIF/PNG/...
+   └───────┬───────┘
+           ↓
+         <img>
+```
 
-- Diario vertical: `1080 × 2160 px`.
-- Semanal horizontal: `1600 × 1000 px`.
+`schedule-core.js` no debe conocer detalles de DOM ni decodificación de imágenes.
 
-## 4. Lenguaje visual
+`content-renderer.js` no decide calendarios ni festivos: recibe una selección ya resuelta y produce la fuente visual que debe usar el `<img>`.
 
-- fondo blanco / gris azulado muy claro;
-- azul oscuro institucional como color estructural;
-- colores pastel estables por asignatura;
-- bordes finos y redondeados;
-- tipografía sans serif de alta legibilidad;
-- cada asignatura conserva su color entre vista diaria y semanal;
-- grupo y aula aparecen dentro del bloque o en la clave inferior.
+`app.js` coordina viewport, selección, renderizado, errores y cambios de orientación.
 
-## 5. Assets
+## 5. Calendario
 
-Por cuatrimestre:
-
-- 1 WebP semanal horizontal;
-- 5 WebP diarios verticales.
-
-Estados globales:
-
-- `no-class-today-vertical.webp`;
-- `vacations-horizontal.webp`.
-
-Los assets no se diseñan a mano uno a uno. Se generan de forma reproducible desde `config/schedules.json` mediante `tools/render_assets.py`.
-
-## 6. Configuración
-
-La fuente de verdad es:
-
-`config/schedules.json`
+Cada curso académico contiene una sección `calendar` independiente de los datos visuales del horario.
 
 Debe admitir:
 
-- cursos académicos;
-- cuatrimestres;
-- fecha inicial y final;
-- asignaturas;
-- nombre corto y completo;
-- grupo;
-- aula;
-- color;
-- sesiones semanales;
+- fechas de cada cuatrimestre;
 - festivos;
-- festividades académicas;
-- periodos no lectivos;
-- rutas de assets;
-- fuentes oficiales de cada horario.
+- días no lectivos;
+- periodos de vacaciones;
+- promoción configurable del siguiente cuatrimestre durante un periodo intermedio.
 
-## 7. Festivos y días no lectivos
+Un festivo puntual afecta a la vista diaria, pero no elimina la estructura semanal del cuatrimestre.
 
-Una fecha puede quedar sin clases por:
+## 6. Assets generados
 
-1. fin de semana;
-2. excepción individual en `exceptions`;
-3. pertenencia a un `nonTeachingPeriod`;
-4. no existir cuatrimestre lectivo activo.
+Los horarios tradicionales siguen manteniendo assets prerenderizados reproducibles:
 
-En vista diaria todos estos casos resuelven a `Sin clases hoy`.
+- 1 WebP semanal por cuatrimestre;
+- 5 WebP diarios por cuatrimestre;
+- estados visuales globales cuando proceda.
 
-En vista semanal un festivo puntual no elimina la semana: se sigue mostrando el horario semanal, porque la vista semanal representa la estructura del cuatrimestre y no únicamente el día actual.
+`tools/render_assets.py` genera estos archivos desde `config/schedules.json`.
 
-## 8. Próximo horario durante vacaciones
+Los assets personalizados declarados mediante `ContentDescriptor image` no necesitan pasar por ese renderer.
 
-Cuando no existe un cuatrimestre activo, la lógica busca el primer cuatrimestre posterior cuya vista semanal esté configurada.
+## 7. Offline
 
-- Si existe: lo muestra.
-- Si no existe: muestra `Vacaciones`.
+`service-worker.js` precachea en la primera carga con conexión:
 
-Esta búsqueda funciona también entre cursos académicos, por lo que añadir el curso siguiente permite que el verano empiece a previsualizar automáticamente ese nuevo horario.
+- HTML, CSS y JavaScript del runtime;
+- `config/schedules.json`;
+- WebP generados;
+- imágenes personalizadas locales declaradas en la configuración.
 
-## 9. Arquitectura
+Las navegaciones y el JSON usan estrategia network-first con fallback a caché. Los recursos estáticos y visuales usan cache-first.
+
+Las imágenes `data:` o `blob:` no se precachean. Los recursos remotos de otro origen tampoco forman parte del precache automático.
+
+El namespace de caché debe versionarse para permitir sustituir cachés antiguas al activar una nueva versión.
+
+## 8. Interfaz
+
+La interfaz debe seguir siendo deliberadamente mínima:
+
+- cero navegación permanente necesaria para consultar el horario;
+- vertical = día;
+- horizontal = semana;
+- cambio de orientación sin recarga;
+- ausencia de scroll innecesario en móvil;
+- una única imagen visible.
+
+El objetivo es optimizar una consulta de pocos segundos, no convertir la aplicación en otro gestor universitario completo.
+
+## 9. Estructura principal
 
 ```text
 /
 ├── index.html
 ├── styles.css
+├── app.js
+├── schedule-core.js
+├── content-renderer.js
+├── service-worker.js
 ├── package.json
 ├── requirements.txt
 ├── config/
 │   └── schedules.json
-├── src/
-│   ├── app.js
-│   └── schedule-core.js
 ├── tools/
 │   ├── build.py
 │   ├── render_assets.py
 │   └── validate_config.py
 ├── tests/
-│   └── schedule-core.test.mjs
+│   ├── schedule-core.test.mjs
+│   ├── content-renderer.test.mjs
+│   ├── service-worker.test.mjs
+│   ├── validate_content_config.py
+│   └── e2e/
+│       └── app.spec.mjs
 ├── docs/
-│   └── especificacion.md
-└── .github/
-    └── workflows/
-        └── pages.yml
+└── .github/workflows/pages.yml
 ```
 
 `dist/` se genera durante el build y no se versiona.
 
-## 10. Flujo de ejecución en navegador
+## 10. Validación
 
-```mermaid
-flowchart TD
-    A[Fecha en Europe/Madrid] --> B{Vertical estrecho?}
-    B -->|Sí| C{Hay clases hoy?}
-    C -->|Sí| D[Resolver día de semana]
-    D --> E[Cargar WebP diario]
-    C -->|No| F[Cargar Sin clases hoy]
-    B -->|No| G{Cuatrimestre activo?}
-    G -->|Sí| H[Cargar WebP semanal activo]
-    G -->|No| I{Existe horario futuro configurado?}
-    I -->|Sí| J[Cargar próximo WebP semanal]
-    I -->|No| K[Cargar Vacaciones]
-```
+`tools/validate_config.py` debe rechazar, entre otros casos:
 
-En el DOM existe un único elemento `<img>`. Al cambiar de orientación se actualiza su `src`.
+- fechas u horas inválidas;
+- rangos de calendario invertidos o solapados;
+- referencias de asignaturas inexistentes;
+- sesiones solapadas;
+- `ContentDescriptor` con tipo desconocido;
+- `image` sin `src`;
+- valores `fit` no admitidos;
+- configuraciones de contenido diario con días desconocidos.
 
-## 11. Build
+Los tests negativos del validador comprueban además que configuraciones deliberadamente erróneas den rojo.
 
-`tools/build.py`:
+## 11. CI y E2E
 
-1. crea `dist/`;
-2. copia HTML, CSS, JS y configuración;
-3. genera todos los WebP desde los datos estructurados;
-4. añade `.nojekyll`.
+GitHub Actions no debe desplegar únicamente porque el JavaScript compile.
 
-## 12. Pruebas
+El pipeline debe:
 
-### Validación estructural
+1. validar configuración;
+2. ejecutar tests de contratos y selección;
+3. construir `dist/`;
+4. abrir ese mismo `dist/` en Chromium mediante Playwright;
+5. comprobar renderizado real, orientación, contenido personalizado y offline;
+6. subir a Pages únicamente el artefacto que haya superado todos los pasos anteriores.
 
-`tools/validate_config.py` comprueba, entre otras cosas:
+Un fallo visual, una imagen que no llegue a cargar o una regresión offline deben detener el despliegue.
 
-- fechas y horas válidas;
-- referencias de asignaturas;
-- presencia de los cinco assets diarios;
-- ausencia de solapamientos de sesiones dentro de un mismo día.
+## 12. Extensión
 
-### Pruebas de selección
+Para añadir otra universidad o curso debería bastar con sustituir o ampliar configuración y assets, sin introducir lógica específica de la institución en el runtime.
 
-`tests/schedule-core.test.mjs` cubre:
-
-- antes del comienzo de curso;
-- día lectivo;
-- fin de semana;
-- festivo;
-- periodo entre cuatrimestres;
-- segundo cuatrimestre;
-- Semana Santa;
-- vacaciones de verano.
-
-### Pruebas visuales
-
-Se comprueban mediante navegador headless distintos viewports de escritorio, móvil vertical y móvil horizontal, verificando escalado y legibilidad de las imágenes generadas.
-
-## 13. Despliegue
-
-GitHub Actions ejecuta:
-
-1. validación;
-2. tests JS;
-3. generación de assets;
-4. build de `dist/`;
-5. subida del artefacto Pages;
-6. despliegue en GitHub Pages.
-
-El repositorio no necesita backend, base de datos ni servidor de aplicación.
-
-## 14. Extensión a futuros años
-
-Para un nuevo curso:
-
-1. añadir el nuevo año a `config/schedules.json`;
-2. añadir cuatrimestres, asignaturas y sesiones;
-3. añadir excepciones y periodos no lectivos;
-4. definir las rutas de assets;
-5. hacer push.
-
-El workflow regenera imágenes y despliega sin modificar la lógica principal.
+La UCM es la configuración de referencia actual, no la identidad arquitectónica de la aplicación.
