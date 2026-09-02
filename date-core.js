@@ -20,9 +20,7 @@ export function dateFromIso(date) {
   return value;
 }
 
-export function isoFromDate(value) {
-  return value.toISOString().slice(0, 10);
-}
+export function isoFromDate(value) { return value.toISOString().slice(0, 10); }
 
 export function addDays(date, amount) {
   const value = dateFromIso(date);
@@ -38,16 +36,11 @@ export function dayKeyFromIso(date) {
   return DAY_KEYS[dateFromIso(date).getUTCDay()];
 }
 
-export function dayIndex(day) {
-  return DAY_KEYS.indexOf(day);
-}
+export function dayIndex(day) { return DAY_KEYS.indexOf(day); }
 
 export function getDateInTimezone(timezone, now = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
+    timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit"
   }).formatToParts(now);
   const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
   return `${values.year}-${values.month}-${values.day}`;

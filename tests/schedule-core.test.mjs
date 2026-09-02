@@ -83,7 +83,9 @@ precedence.calendar.inactiveWeekdays.friday = {
   image: { type: "image", src: "assets/inactive/friday.svg", fit: "contain", alt: "Viernes" }
 };
 precedence.academicYears[0].calendar.inactiveDates.push({
-  date: "2026-12-25", type: "non-teaching", label: "Fecha exacta",
+  date: "2026-12-25",
+  type: "non-teaching",
+  label: "Fecha exacta",
   image: { type: "image", src: "assets/inactive/exact.svg", fit: "contain", alt: "Exacta" }
 });
 evaluation = evaluateDate(precedence, "2026-12-25");
@@ -161,7 +163,9 @@ assert.equal(selection.content.fallbackSrc, "assets/q1/wednesday.webp");
 const monthConfig = structuredClone(config);
 monthConfig.views.wide_default.range = { type: "month" };
 selection = selectScheduleContent(monthConfig, {
-  date: "2026-09-09", viewport: { width: 1440, height: 900, pointer: "fine" }, manualViewId: "wide_default"
+  date: "2026-09-09",
+  viewport: { width: 1440, height: 900, pointer: "fine" },
+  manualViewId: "wide_default"
 });
 assert.equal(selection.kind, "range");
 assert.equal(selection.range.type, "month");

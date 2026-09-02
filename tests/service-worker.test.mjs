@@ -47,20 +47,37 @@ const config = {
     vacationsHorizontal: "assets/states/vacations.webp"
   },
   calendar: {
-    inactive: { defaultImage: { type: "image", src: "assets/inactive/default.webp" } },
-    inactiveWeekdays: { sunday: { image: { type: "image", src: "assets/inactive/sunday.gif" } } }
+    inactive: {
+      defaultImage: { type: "image", src: "assets/inactive/default.webp" }
+    },
+    inactiveWeekdays: {
+      sunday: { image: { type: "image", src: "assets/inactive/sunday.gif" } }
+    }
   },
   academicYears: [{
     calendar: {
-      holidays: [{ date: "2026-12-25", image: { type: "image", src: "assets/inactive/christmas.svg" } }],
-      periods: [{ id: "winter", image: { type: "image", src: "data:image/png;base64,AAAA" } }]
+      holidays: [
+        { date: "2026-12-25", image: { type: "image", src: "assets/inactive/christmas.svg" } }
+      ],
+      periods: [
+        { id: "winter", image: { type: "image", src: "data:image/png;base64,AAAA" } }
+      ]
     },
     terms: [{
-      assets: { week: "assets/q1/week.webp", days: { monday: "assets/q1/monday.webp" } },
-      content: { days: { monday: { type: "image", src: "https://cdn.example.org/remote.png" } } }
+      assets: {
+        week: "assets/q1/week.webp",
+        days: { monday: "assets/q1/monday.webp" }
+      },
+      content: {
+        days: {
+          monday: { type: "image", src: "https://cdn.example.org/remote.png" }
+        }
+      }
     }]
   }],
-  rules: [{ content: { type: "image", src: "assets/custom/rule.avif" } }]
+  rules: [
+    { content: { type: "image", src: "assets/custom/rule.avif" } }
+  ]
 };
 
 const paths = [...context.scheduleAssetPaths(config)].sort();
@@ -76,7 +93,9 @@ assert.deepEqual(paths, [
 ]);
 
 let activation = null;
-listeners.get("activate")({ waitUntil(promise) { activation = promise; } });
+listeners.get("activate")({
+  waitUntil(promise) { activation = promise; }
+});
 await activation;
 
 assert.deepEqual(deletedCaches.sort(), [
@@ -85,6 +104,7 @@ assert.deepEqual(deletedCaches.sort(), [
   "ucm-scheduler-offline-v1"
 ].sort());
 assert.equal(claimed, true);
+
 assert.match(code, /config\/schedule\.json/);
 assert.match(code, /offline-v3/);
 assert.match(code, /discoverImageDescriptors/);

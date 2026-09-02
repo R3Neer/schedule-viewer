@@ -45,8 +45,6 @@ body {
   text-align: center;
 }
 
-/* Phone mode: the artwork itself is composed for the visible viewport.
-   Keep the document locked to one screen and let the image scale down, never scroll. */
 html[data-phone="1"],
 html[data-phone="1"] body {
   width: 100%;
