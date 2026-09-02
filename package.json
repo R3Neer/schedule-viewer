@@ -1,5 +1,5 @@
 {
-  "name": "ucm-scheduler",
+  "name": "schedule-viewer",
   "private": true,
   "type": "module",
   "scripts": {
