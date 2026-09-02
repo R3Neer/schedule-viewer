@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/schedule-core.test.mjs",
+    "test": "node tests/schedule-core.test.mjs && node tests/content-renderer.test.mjs && node tests/service-worker.test.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
