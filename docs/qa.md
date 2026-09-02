@@ -1,60 +1,69 @@
-# QA — Schedule Viewer
+# QA — Schedule Viewer v3
 
-## Automated validation
+Deployment is blocked unless the exact built `dist/` artifact passes validation and real-browser tests.
 
-The deployment workflow validates the real production path before GitHub Pages receives anything.
+## Static validation
 
-Current CI stages:
+`tools/validate_config.py` parses `config/schedule.yaml` with `yaml.safe_load`, normalizes it and rejects invalid v3 configuration.
 
-1. validate `config/schedules.json`;
-2. verify valid and invalid configurable-content contracts;
-3. run schedule-selection, renderer and Service Worker unit tests;
-4. build `dist/` and all generated WebP assets;
-5. install Chromium;
-6. open the built web app with Playwright;
-7. deploy only if every previous step is green.
+`tests/config-v3.test.py` includes positive and negative contracts for:
 
-## Schedule-selection coverage
+- required inactive fallback image;
+- weekdays;
+- day/week/month/year/relative/rolling/interval ranges;
+- invalid dates;
+- inverted intervals;
+- invalid renderers;
+- broken desktop view references;
+- unknown rule views;
+- invalid image descriptors;
+- session overlaps;
+- unknown subjects;
+- ambiguous overlapping periods.
 
-The unit suite covers, among other cases:
+## JavaScript unit contracts
 
-- dates before the first term;
-- active weekdays;
-- weekends;
-- ordinary holidays;
-- university non-teaching days;
-- the inter-term vacation period;
-- preview of the next term from the configured promotion date;
-- the second term;
-- Easter vacation;
-- summer vacation;
-- custom image overrides for day, week and state content;
-- automatic discovery of local custom assets for offline caching.
+`tests/schedule-core.test.mjs` covers:
 
-## Browser E2E coverage
+- leap-day date arithmetic;
+- all supported range families;
+- configurable week starts;
+- view profile priority;
+- manual views;
+- desktop context and toggling;
+- zero/one/two inactive recurring weekend days;
+- active-date overrides;
+- inactive image precedence;
+- holidays, vacations and non-teaching days;
+- current/next/explicit-term rules;
+- monthly generated ranges;
+- custom asset discovery.
 
-Playwright opens the exact `dist/` artifact that will later be deployed and verifies:
+Renderer and Service Worker behavior have separate contract suites.
 
-- iPhone portrait renders the expected daily timetable;
-- a holiday renders `Sin clases hoy`;
-- iPhone landscape renders vacations and the next-term transition correctly;
-- rotating portrait → landscape → portrait changes the view without reloading;
-- neither phone orientation introduces unwanted viewport scrolling;
-- a custom animated GIF renders as `image` content;
-- a custom PNG renders as weekly `image` content;
-- the mobile app reloads successfully after the network is cut;
-- desktop reloads offline and still receives the cached weekly WebP.
+## Browser E2E
 
-Each rendered image must be visible, complete and have the expected natural dimensions. The error box must remain hidden.
+Playwright opens `dist/` in Chromium.
 
-## Runtime invariants
+The v3 suite verifies at least:
 
-- The DOM keeps a single visible schedule/content `<img>`.
-- Calendar selection is separated from visual rendering.
-- `generated-schedule` content can render dynamically as SVG.
-- `image` content is passed directly to the browser, so supported image formats preserve native behaviour, including animation.
-- The Service Worker caches local content by URL rather than by image extension.
+- phone portrait;
+- phone landscape;
+- orientation change without reload;
+- Saturday active + Sunday inactive configuration;
+- no recurring inactive weekdays;
+- required inactive fallback image;
+- per-holiday animated GIF override;
+- exact-date image overriding a period image;
+- vacation behavior and Q2 preview priority;
+- desktop horizontal default;
+- Space toggling without reload;
+- keyboard accessibility exclusions;
+- monthly range;
+- arbitrary relative range;
+- absolute interval;
+- no unexpected viewport scroll;
+- offline phone inactive image;
+- offline desktop WebP and Space toggle.
 
-## Current configured instance
-
-The production configuration in this repository is still Samuel's 2026–2027 UCM Computer Science timetable. UCM-specific dates, subjects, rooms and source URLs belong to `config/schedules.json`; the runtime itself is intended to remain university-agnostic.
+A failed browser assertion blocks Pages upload and deployment.
