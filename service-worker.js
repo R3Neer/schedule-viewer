@@ -1,4 +1,4 @@
-const CACHE_PREFIX = "ucm-scheduler-";
+const CACHE_PREFIX = "schedule-viewer-";
 const CACHE_NAME = `${CACHE_PREFIX}offline-v2-content`;
 const SCOPE = self.registration.scope;
 
