@@ -80,8 +80,8 @@ jobs:
           grep -q 'cm-editor' dist/lazy/yaml-editor.js
           ! grep -qi 'codemirror' dist/app.js
           ! grep -qi 'codemirror' dist/settings-ui.js
+          grep -q 'lazy/config-io.js' dist/service-worker.js
           ! grep -q 'lazy/yaml-editor.js' dist/service-worker.js
-          ! grep -q 'lazy/config-io.js' dist/service-worker.js
           python - <<'PY'
           import json
           from pathlib import Path

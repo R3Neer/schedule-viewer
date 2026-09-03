@@ -50,37 +50,20 @@ const config = {
     vacationsHorizontal: "assets/states/vacations.webp"
   },
   calendar: {
-    inactive: {
-      defaultImage: { type: "image", src: "assets/inactive/default.webp" }
-    },
-    inactiveWeekdays: {
-      sunday: { image: { type: "image", asset: "sunday-local" } }
-    }
+    inactive: { defaultImage: { type: "image", src: "assets/inactive/default.webp" } },
+    inactiveWeekdays: { sunday: { image: { type: "image", asset: "sunday-local" } } }
   },
   academicYears: [{
     calendar: {
-      holidays: [
-        { date: "2026-12-25", image: { type: "image", src: "assets/inactive/christmas.svg" } }
-      ],
-      periods: [
-        { id: "winter", image: { type: "image", src: "data:image/png;base64,AAAA" } }
-      ]
+      holidays: [{ date: "2026-12-25", image: { type: "image", src: "assets/inactive/christmas.svg" } }],
+      periods: [{ id: "winter", image: { type: "image", src: "data:image/png;base64,AAAA" } }]
     },
     terms: [{
-      assets: {
-        week: "assets/q1/week.webp",
-        days: { monday: "assets/q1/monday.webp" }
-      },
-      content: {
-        days: {
-          monday: { type: "image", src: "https://cdn.example.org/remote.png" }
-        }
-      }
+      assets: { week: "assets/q1/week.webp", days: { monday: "assets/q1/monday.webp" } },
+      content: { days: { monday: { type: "image", src: "https://cdn.example.org/remote.png" } } }
     }]
   }],
-  rules: [
-    { content: { type: "image", src: "assets/custom/rule.avif" } }
-  ]
+  rules: [{ content: { type: "image", src: "assets/custom/rule.avif" } }]
 };
 
 const paths = [...context.scheduleAssetPaths(config)].sort();
@@ -98,7 +81,6 @@ assert.ok(!paths.some((path) => path.includes("sunday-local")), "los Blob de Ind
 let activation = null;
 listeners.get("activate")({ waitUntil(promise) { activation = promise; } });
 await activation;
-
 assert.deepEqual(deletedCaches.sort(), [
   "schedule-viewer-offline-v2-content",
   "schedule-viewer-old",
@@ -115,7 +97,7 @@ assert.match(code, /MIGRATION_CACHE_PREFIX/);
 assert.match(code, /discoverImageDescriptors/);
 assert.match(code, /ignoreSearch/);
 assert.match(code, /local-store\.js/);
-assert.doesNotMatch(code, /lazy\/yaml-editor\.js/, "CodeMirror no debe precachearse en el arranque");
-assert.doesNotMatch(code, /lazy\/config-io\.js/, "el bundle de import/export también debe ser bajo demanda");
+assert.match(code, /lazy\/config-io\.js/, "import/export debe estar disponible offline sin ejecutar su bundle en la carga inicial");
+assert.doesNotMatch(code, /lazy\/yaml-editor\.js/, "CodeMirror debe seguir siendo descarga realmente bajo demanda");
 
-console.log("service-worker v4: preserva v3 hasta migración, separa IndexedDB y mantiene lazy real OK");
+console.log("service-worker v4: preserva v3, separa IndexedDB, precachea config-io y deja CodeMirror lazy OK");

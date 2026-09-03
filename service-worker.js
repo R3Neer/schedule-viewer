@@ -21,7 +21,8 @@ const CORE_PATHS = [
   "./asset-resolver.js",
   "./device-ui.js",
   "./config-schema.js",
-  "./settings-ui.js"
+  "./settings-ui.js",
+  "./lazy/config-io.js"
 ];
 
 function scoped(path) {
