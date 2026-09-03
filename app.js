@@ -51,7 +51,7 @@ function getRequestedDate() {
 function pointerType() {
   if (window.matchMedia?.("(pointer: fine)").matches) return "fine";
   if (window.matchMedia?.("(pointer: coarse)").matches) return "coarse";
-  return "any";
+  return uiEnvironment.deviceMode === "touch" ? "coarse" : "fine";
 }
 
 function viewportContext() {
