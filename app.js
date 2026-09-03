@@ -9,6 +9,7 @@ import {
 import { renderSelectionContent } from "./runtime-renderer.js";
 import { MissingLocalAssetError, releaseResolvedSource, resolveRenderedSource } from "./asset-resolver.js";
 import {
+  cleanupLegacyMigrationCaches,
   deleteUnreferencedAssets,
   loadUserConfig,
   migrateCachedV3Config,
@@ -197,7 +198,11 @@ async function fetchDemoConfig() {
 
 async function loadInitialConfig() {
   let local = await loadUserConfig();
-  if (!local) local = await migrateCachedV3Config();
+  if (!local) {
+    local = await migrateCachedV3Config();
+  } else {
+    await cleanupLegacyMigrationCaches();
+  }
   demoConfig = await fetchDemoConfig();
   if (local?.normalized) {
     config = local.normalized;
@@ -218,6 +223,7 @@ async function applyLocalConfig(nextConfig, { yaml = null, assets = [] } = {}) {
   manualViewId = null;
   currentKey = null;
   await deleteUnreferencedAssets(collectAssetIds(config));
+  await cleanupLegacyMigrationCaches();
   await render();
   settingsController?.syncState();
 }
@@ -229,6 +235,7 @@ async function restoreDemo() {
   configYaml = null;
   manualViewId = null;
   currentKey = null;
+  await cleanupLegacyMigrationCaches();
   await render();
   settingsController?.syncState();
 }

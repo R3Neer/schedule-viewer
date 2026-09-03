@@ -1,5 +1,6 @@
 const CACHE_PREFIX = "schedule-viewer-";
-const LEGACY_CACHE_PREFIXES = ["ucm-scheduler-", "schedule-viewer-offline-v2", "schedule-viewer-offline-v3"];
+const LEGACY_CACHE_PREFIXES = ["ucm-scheduler-", "schedule-viewer-offline-v2"];
+const MIGRATION_CACHE_PREFIX = "schedule-viewer-offline-v3";
 const CACHE_NAME = `${CACHE_PREFIX}offline-v4`;
 const SCOPE = self.registration.scope;
 
@@ -44,7 +45,6 @@ function discoverImageDescriptors(paths, node) {
     return;
   }
   if (typeof node !== "object") return;
-
   if (node.type === "image" && typeof node.src === "string") addLocalAsset(paths, node.src);
   for (const value of Object.values(node)) discoverImageDescriptors(paths, value);
 }
@@ -89,13 +89,19 @@ self.addEventListener("install", (event) => {
   })());
 });
 
+function isMigrationCache(name) {
+  return name === MIGRATION_CACHE_PREFIX || name.startsWith(`${MIGRATION_CACHE_PREFIX}-`);
+}
+
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
     const ownedPrefixes = [CACHE_PREFIX, ...LEGACY_CACHE_PREFIXES];
     await Promise.all(
       names
-        .filter((name) => name !== CACHE_NAME && ownedPrefixes.some((prefix) => name.startsWith(prefix)))
+        .filter((name) => name !== CACHE_NAME)
+        .filter((name) => !isMigrationCache(name))
+        .filter((name) => ownedPrefixes.some((prefix) => name.startsWith(prefix)))
         .map((name) => caches.delete(name))
     );
     await self.clients.claim();
@@ -158,7 +164,6 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-
   if (url.pathname.endsWith("/config/schedule.json")) {
     event.respondWith(networkFirstConfig(request));
     return;

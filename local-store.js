@@ -3,6 +3,7 @@ const DB_VERSION = 1;
 const CONFIG_STORE = "config";
 const ASSET_STORE = "assets";
 const ACTIVE_CONFIG_ID = "active";
+const V3_MIGRATION_CACHE_PREFIX = "schedule-viewer-offline-v3";
 
 function requestAsPromise(request) {
   return new Promise((resolve, reject) => {
@@ -157,6 +158,14 @@ export async function resetUserState({ clearAssets = true } = {}, factory = glob
   });
 }
 
+export async function cleanupLegacyMigrationCaches({ cacheStorage = globalThis.caches } = {}) {
+  if (!cacheStorage) return [];
+  const names = await cacheStorage.keys();
+  const candidates = names.filter((name) => name === V3_MIGRATION_CACHE_PREFIX || name.startsWith(`${V3_MIGRATION_CACHE_PREFIX}-`));
+  await Promise.all(candidates.map((name) => cacheStorage.delete(name)));
+  return candidates;
+}
+
 function hashText(value) {
   let hash = 2166136261;
   for (let i = 0; i < value.length; i += 1) {
@@ -209,9 +218,14 @@ export async function migrateCachedV3Config({
   cacheStorage = globalThis.caches,
   baseURI = globalThis.location?.href
 } = {}) {
-  if (!cacheStorage || !baseURI || await hasUserConfig(factory)) return null;
+  if (!cacheStorage || !baseURI) return null;
+  if (await hasUserConfig(factory)) {
+    await cleanupLegacyMigrationCaches({ cacheStorage });
+    return loadUserConfig(factory);
+  }
+
   const names = await cacheStorage.keys();
-  const candidates = names.filter((name) => name === "schedule-viewer-offline-v3" || name.startsWith("schedule-viewer-offline-v3-"));
+  const candidates = names.filter((name) => name === V3_MIGRATION_CACHE_PREFIX || name.startsWith(`${V3_MIGRATION_CACHE_PREFIX}-`));
 
   for (const name of candidates) {
     const cache = await cacheStorage.open(name);
@@ -230,15 +244,16 @@ export async function migrateCachedV3Config({
     const pendingAssets = [];
     await rewriteCachedImages(migrated, cache, baseURI, pendingAssets);
 
-    // Los WebP de horarios de una instancia previa no forman parte de la app pública.
-    // Al anular sus rutas, el renderer genera SVG dinámico y evita depender del cache antiguo.
     for (const year of migrated.academicYears ?? []) {
       for (const term of year.terms ?? []) term.assets = { week: null, days: {} };
     }
     migrated.runtime = { ...(migrated.runtime ?? {}), demo: false };
-    return saveUserState({ config: migrated, yaml: null, assets: pendingAssets, source: "local" }, factory);
+    const record = await saveUserState({ config: migrated, yaml: null, assets: pendingAssets, source: "local" }, factory);
+    await cleanupLegacyMigrationCaches({ cacheStorage });
+    return record;
   }
   return null;
 }
 
 export const LOCAL_DB_NAME = DB_NAME;
+export const LEGACY_V3_CACHE_PREFIX = V3_MIGRATION_CACHE_PREFIX;

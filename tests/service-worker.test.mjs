@@ -42,6 +42,7 @@ assert.ok(listeners.has("install"));
 assert.ok(listeners.has("activate"));
 assert.ok(listeners.has("fetch"));
 assert.equal(typeof context.scheduleAssetPaths, "function");
+assert.equal(typeof context.isMigrationCache, "function");
 
 const config = {
   states: {
@@ -95,25 +96,26 @@ assert.deepEqual(paths, [
 assert.ok(!paths.some((path) => path.includes("sunday-local")), "los Blob de IndexedDB no deben duplicarse en Cache Storage");
 
 let activation = null;
-listeners.get("activate")({
-  waitUntil(promise) { activation = promise; }
-});
+listeners.get("activate")({ waitUntil(promise) { activation = promise; } });
 await activation;
 
 assert.deepEqual(deletedCaches.sort(), [
   "schedule-viewer-offline-v2-content",
-  "schedule-viewer-offline-v3",
   "schedule-viewer-old",
   "ucm-scheduler-offline-v1"
 ].sort());
 assert.equal(claimed, true);
+assert.equal(context.isMigrationCache("schedule-viewer-offline-v3"), true);
+assert.equal(context.isMigrationCache("schedule-viewer-offline-v3-content"), true);
+assert.equal(context.isMigrationCache("schedule-viewer-offline-v4"), false);
 
 assert.match(code, /config\/schedule\.json/);
 assert.match(code, /offline-v4/);
+assert.match(code, /MIGRATION_CACHE_PREFIX/);
 assert.match(code, /discoverImageDescriptors/);
 assert.match(code, /ignoreSearch/);
 assert.match(code, /local-store\.js/);
 assert.doesNotMatch(code, /lazy\/yaml-editor\.js/, "CodeMirror no debe precachearse en el arranque");
 assert.doesNotMatch(code, /lazy\/config-io\.js/, "el bundle de import/export también debe ser bajo demanda");
 
-console.log("service-worker v4: app cache separada de IndexedDB, lazy real y limpieza legacy OK");
+console.log("service-worker v4: preserva v3 hasta migración, separa IndexedDB y mantiene lazy real OK");
