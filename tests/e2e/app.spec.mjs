@@ -1,308 +1,419 @@
-import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 
-const baseConfig = JSON.parse(
-  fs.readFileSync(new URL("../../dist/config/schedule.json", import.meta.url), "utf8")
+const PNG_BUFFER = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAFUlEQVR4nGNkYPjPwMDAwMDAxAADABErAQPdiBRnAAAAAElFTkSuQmCC",
+  "base64"
+);
+const GIF_BUFFER = Buffer.from(
+  "R0lGODlhAgACAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQACgAAACwAAAAAAgACAAAIBgABCAQQEAAh+QQBCgABACwAAAAAAgACAIEA/wAAAAAAAAAAAAAIBgABCAQQEAA7",
+  "base64"
 );
 
-const ANIMATED_GIF = "data:image/gif;base64,R0lGODlhAgACAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQACgAAACwAAAAAAgACAAAIBgABCAQQEAAh+QQBCgABACwAAAAAAgACAIEA/wAAAAAAAAAAAAAIBgABCAQQEAA7";
-const PNG_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAFUlEQVR4nGNkYPjPwMDAwMDAxAADABErAQPdiBRnAAAAAElFTkSuQmCC";
-
-async function expectRendered(page, { kind, viewProfile, rangeType, rangeStart, rangeEnd, calendarStatus, alt, width, height, src, contentType, fit }) {
-  const html = page.locator("html");
-  if (kind) await expect(html).toHaveAttribute("data-view", kind);
-  if (viewProfile) await expect(html).toHaveAttribute("data-view-profile", viewProfile);
-  if (rangeType) await expect(html).toHaveAttribute("data-range-type", rangeType);
-  if (rangeStart) await expect(html).toHaveAttribute("data-range-start", rangeStart);
-  if (rangeEnd) await expect(html).toHaveAttribute("data-range-end", rangeEnd);
-  if (calendarStatus) await expect(html).toHaveAttribute("data-calendar-status", calendarStatus);
-  if (contentType) await expect(html).toHaveAttribute("data-content-type", contentType);
-
-  await expect(page.locator("#error-message")).toBeHidden();
-  const image = page.locator("#schedule-image");
-  await expect(image).toBeVisible();
-  if (alt) await expect(image).toHaveAttribute("alt", alt);
-  if (src) await expect(image).toHaveAttribute("src", src);
-  if (fit) await expect.poll(() => image.evaluate((node) => node.style.objectFit)).toBe(fit);
-  if (width != null && height != null) {
-    await expect.poll(async () => image.evaluate((node) => ({ complete: node.complete, width: node.naturalWidth, height: node.naturalHeight }))).toEqual({ complete: true, width, height });
-  }
-}
-
-async function expectNoViewportScroll(page) {
-  await expect.poll(() => page.evaluate(() => ({
-    horizontal: document.documentElement.scrollWidth <= window.innerWidth + 1,
-    vertical: document.documentElement.scrollHeight <= window.innerHeight + 1
-  }))).toEqual({ horizontal: true, vertical: true });
-}
-
-async function expectImageHasVisualDetail(page) {
-  await expect.poll(() => page.locator("#schedule-image").evaluate((image) => {
-    if (!image.complete || !image.naturalWidth) return false;
-    const canvas = document.createElement("canvas");
-    canvas.width = 50; canvas.height = 32;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    const colors = new Set(); let darkish = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      colors.add(`${Math.round(r / 16)},${Math.round(g / 16)},${Math.round(b / 16)}`);
-      if (Math.min(r, g, b) < 220) darkish += 1;
+async function mockInputEnvironment(page, { touch = false, apple = false } = {}) {
+  await page.addInitScript(({ touch, apple }) => {
+    const nativeMatchMedia = window.matchMedia.bind(window);
+    const forcedMql = (query, matches) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent() { return false; }
+    });
+    window.matchMedia = (query) => {
+      if (query === "(pointer: coarse)") return forcedMql(query, touch);
+      if (query === "(pointer: fine)") return forcedMql(query, !touch);
+      if (query === "(hover: none)") return forcedMql(query, touch);
+      return nativeMatchMedia(query);
+    };
+    Object.defineProperty(navigator, "maxTouchPoints", { configurable: true, get: () => touch ? 5 : 0 });
+    if (apple) {
+      Object.defineProperty(navigator, "userAgent", {
+        configurable: true,
+        get: () => touch
+          ? "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1"
+          : "Mozilla/5.0 (Macintosh; Intel Mac OS X 26_0) AppleWebKit/605.1.15 Version/26.0 Safari/605.1.15"
+      });
+      Object.defineProperty(navigator, "platform", { configurable: true, get: () => touch ? "iPhone" : "MacIntel" });
     }
-    return colors.size >= 8 && darkish >= 15;
-  })).toBe(true);
+  }, { touch, apple });
 }
 
-async function useCustomConfig(page, mutate) {
-  const custom = structuredClone(baseConfig);
-  mutate(custom);
-  await page.route("**/config/schedule.json", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify(custom) });
-  });
-  return custom;
+async function openTouch(page, date = "2026-09-09", { apple = true, width = 402, height = 874 } = {}) {
+  await mockInputEnvironment(page, { touch: true, apple });
+  await page.setViewportSize({ width, height });
+  await page.goto(`/?date=${date}`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-device-mode", "touch");
+  await expect(page.locator("#schedule-image")).toBeVisible();
 }
 
-async function waitForServiceWorker(page) {
+async function openDesktop(page, date = "2026-09-09", { apple = false } = {}) {
+  await mockInputEnvironment(page, { touch: false, apple });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/?date=${date}`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-device-mode", "desktop");
+  await expect(page.locator("#schedule-image")).toBeVisible();
+}
+
+async function openSettings(page) {
+  await page.locator("#settings-button").click();
+  await expect(page.locator("#settings-dialog")).toHaveAttribute("open", "");
+}
+
+async function closeSettings(page) {
+  await page.locator("#settings-close").click();
+  await expect(page.locator("#settings-dialog")).not.toHaveAttribute("open", "");
+}
+
+async function saveSettings(page) {
+  await page.locator("#settings-save").click();
+  await expect(page.locator("#settings-status")).toContainText("Guardado en este dispositivo");
+  await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
+}
+
+async function chooseImage(page, rowText, file) {
+  const row = page.locator(".image-setting").filter({ hasText: rowText });
+  const chooserPromise = page.waitForEvent("filechooser");
+  await row.getByRole("button", { name: /Cambiar|Usar imagen específica/ }).click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles(file);
+}
+
+async function waitForServiceWorkerControl(page) {
   await expect(page.locator("html")).toHaveAttribute("data-offline-ready", "1", { timeout: 15_000 });
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
     if (navigator.serviceWorker.controller) return;
     await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error("El Service Worker no tomó control")), 7_500);
-      navigator.serviceWorker.addEventListener("controllerchange", () => { clearTimeout(timeout); resolve(); }, { once: true });
+      const timer = setTimeout(() => reject(new Error("Service Worker sin control")), 8_000);
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        clearTimeout(timer);
+        resolve();
+      }, { once: true });
     });
   });
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
-  await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-v3"))).toBe(true);
 }
 
-test("iPhone vertical abre un día lectivo con la vista diaria configurada", async ({ page }) => {
-  await page.setViewportSize({ width: 402, height: 874 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "day", viewProfile: "phone_portrait", rangeType: "day", rangeStart: "2026-09-09", rangeEnd: "2026-09-09",
-    calendarStatus: "normal", alt: /1er Cuatrimestre, horario del wednesday/, width: 1000, height: 1850,
-    src: /^data:image\/svg\+xml/, contentType: "generated-schedule"
-  });
+async function expectNoViewportScroll(page) {
+  await expect.poll(() => page.evaluate(() => ({
+    x: document.documentElement.scrollWidth <= window.innerWidth + 1,
+    y: document.documentElement.scrollHeight <= window.innerHeight + 1
+  }))).toEqual({ x: true, y: true });
+}
+
+test("iPhone abre la demo diaria con tema Apple y aviso de personalización", async ({ page }) => {
+  await openTouch(page);
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-ui-theme", "apple");
+  await expect(html).toHaveAttribute("data-config-source", "demo");
+  await expect(html).toHaveAttribute("data-view-profile", "touch_portrait");
+  await expect(html).toHaveAttribute("data-range-type", "day");
+  await expect(page.locator("#demo-hint")).toBeVisible();
+  await expect(page.locator("#demo-hint")).toContainText("Personaliza tu horario desde Ajustes");
   await expectNoViewportScroll(page);
 });
 
-test("iPhone horizontal usa la vista semanal y calcula lunes-domingo", async ({ page }) => {
-  await page.setViewportSize({ width: 874, height: 402 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "week", viewProfile: "phone_landscape", rangeType: "week", rangeStart: "2026-09-07", rangeEnd: "2026-09-13",
-    width: 2500, height: 1000, src: /^data:image\/svg\+xml/, contentType: "generated-schedule"
-  });
-  await expectNoViewportScroll(page);
+test("en touch Ajustes muestra solo Vertical/Horizontal y el engranaje se oculta y reaparece", async ({ page }) => {
+  await openTouch(page);
+  const cog = page.locator("#settings-button");
+  await expect(cog).not.toHaveClass(/is-hidden/);
+  await expect(cog).toHaveClass(/is-hidden/, { timeout: 5_000 });
+  await page.locator(".schedule-shell").dispatchEvent("pointerdown");
+  await expect(cog).not.toHaveClass(/is-hidden/);
+  await openSettings(page);
+  await expect(page.getByLabel("Vertical")).toBeVisible();
+  await expect(page.getByLabel("Horizontal")).toBeVisible();
+  await expect(page.getByLabel("Principal")).toHaveCount(0);
+  await expect(page.getByLabel("Secundaria")).toHaveCount(0);
 });
 
-test("girar el iPhone cambia de perfil sin recargar", async ({ page }) => {
-  await page.setViewportSize({ width: 402, height: 874 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "phone_portrait");
-  await page.evaluate(() => { window.__sentinel = crypto.randomUUID(); });
-  const sentinel = await page.evaluate(() => window.__sentinel);
-  await page.setViewportSize({ width: 874, height: 402 });
-  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "phone_landscape");
-  await expect(page.locator("html")).toHaveAttribute("data-view", "week");
-  expect(await page.evaluate(() => window.__sentinel)).toBe(sentinel);
-  await page.setViewportSize({ width: 402, height: 874 });
-  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "phone_portrait");
-  expect(await page.evaluate(() => window.__sentinel)).toBe(sentinel);
+test("el aviso demo abre Ajustes directamente", async ({ page }) => {
+  await openTouch(page);
+  await page.locator("#demo-hint").click();
+  await expect(page.locator("#settings-dialog")).toHaveAttribute("open", "");
+  await expect(page.locator("#settings-source")).toHaveText("Configuración demo");
 });
 
-test("solo domingo puede configurarse como día recurrentemente inactivo", async ({ page }) => {
-  await useCustomConfig(page, (config) => { config.calendar.inactiveWeekdays = { sunday: {} }; });
-  await page.setViewportSize({ width: 402, height: 874 });
-  await page.goto("/?date=2026-09-12", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, { kind: "day", calendarStatus: "normal", alt: /horario del saturday/, width: 1000, height: 1850, contentType: "generated-schedule" });
-  await page.goto("/?date=2026-09-13", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, { kind: "inactive", calendarStatus: "inactive-weekday", alt: "Sin clases hoy", width: 1080, height: 2160, contentType: "image" });
+test("en escritorio Ajustes muestra Principal/Secundaria, Ctrl+, abre y Escape cierra", async ({ page }) => {
+  await openDesktop(page);
+  await expect(page.locator("html")).toHaveAttribute("data-ui-theme", "generic");
+  await page.keyboard.press("Control+Comma");
+  await expect(page.locator("#settings-dialog")).toHaveAttribute("open", "");
+  await expect(page.getByLabel("Principal")).toBeVisible();
+  await expect(page.getByLabel("Secundaria")).toBeVisible();
+  await expect(page.getByLabel("Vertical")).toHaveCount(0);
+  await expect(page.getByLabel("Horizontal")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#settings-dialog")).not.toHaveAttribute("open", "");
 });
 
-test("puede no haber ningún weekday inactivo", async ({ page }) => {
-  await useCustomConfig(page, (config) => { config.calendar.inactiveWeekdays = {}; });
-  await page.setViewportSize({ width: 402, height: 874 });
-  await page.goto("/?date=2026-09-13", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, { kind: "day", calendarStatus: "normal", alt: /horario del sunday/, width: 1000, height: 1850, contentType: "generated-schedule" });
+test("Cmd+, abre Ajustes en el entorno Apple de escritorio", async ({ page }) => {
+  await openDesktop(page, "2026-09-09", { apple: true });
+  await expect(page.locator("html")).toHaveAttribute("data-ui-theme", "apple");
+  await page.evaluate(() => document.dispatchEvent(new KeyboardEvent("keydown", {
+    key: ",", metaKey: true, bubbles: true, cancelable: true
+  })));
+  await expect(page.locator("#settings-dialog")).toHaveAttribute("open", "");
 });
 
-test("un festivo sin override usa siempre la imagen inactiva obligatoria", async ({ page }) => {
-  await page.setViewportSize({ width: 402, height: 874 });
-  await page.goto("/?date=2026-10-12", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "inactive", viewProfile: "phone_portrait", calendarStatus: "holiday", alt: "Sin clases hoy", width: 1080, height: 2160,
-    src: /assets\/states\/no-class-today-vertical\.webp$/, contentType: "image"
-  });
-});
-
-test("un festivo puede sustituir la imagen inactiva por un GIF", async ({ page }) => {
-  await useCustomConfig(page, (config) => {
-    config.academicYears[0].calendar.holidays.find((item) => item.date === "2026-10-12").image = {
-      type: "image", src: ANIMATED_GIF, alt: "GIF festivo", fit: "cover"
-    };
-  });
-  await page.setViewportSize({ width: 402, height: 874 });
-  await page.goto("/?date=2026-10-12", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "inactive", calendarStatus: "holiday", alt: "GIF festivo", width: 2, height: 2,
-    src: /^data:image\/gif;base64/, contentType: "image", fit: "cover"
-  });
-});
-
-test("una fecha concreta gana a la imagen del periodo que la contiene", async ({ page }) => {
-  await useCustomConfig(page, (config) => {
-    const year = config.academicYears[0];
-    year.calendar.periods.find((item) => item.id === "winter-interterm").image = { type: "image", src: ANIMATED_GIF, alt: "Periodo", fit: "contain" };
-    year.calendar.inactiveDates.push({
-      date: "2026-12-25", type: "non-teaching", label: "Navidad exacta",
-      image: { type: "image", src: PNG_IMAGE, alt: "Navidad exacta", fit: "contain" }
-    });
-  });
-  await page.setViewportSize({ width: 402, height: 874 });
-  await page.goto("/?date=2026-12-25", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "inactive", calendarStatus: "non-teaching", alt: "Navidad exacta", width: 3, height: 2,
-    src: /^data:image\/png;base64/, contentType: "image"
-  });
-});
-
-test("vacaciones horizontales y preview de Q2 respetan reglas con prioridad", async ({ page }) => {
-  await page.setViewportSize({ width: 874, height: 402 });
-  await page.goto("/?date=2027-01-10", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "inactive", calendarStatus: "vacation", alt: "Vacaciones", width: 1600, height: 1000,
-    src: /assets\/states\/vacations-horizontal\.webp$/, contentType: "image"
-  });
-  await page.goto("/?date=2027-01-20", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "next-week", calendarStatus: "vacation", rangeType: "week", rangeStart: "2027-01-18", rangeEnd: "2027-01-24",
-    alt: /2º Cuatrimestre, horario semanal/, width: 2500, height: 1000, src: /^data:image\/svg\+xml/, contentType: "generated-schedule"
-  });
-});
-
-test("escritorio arranca siempre en la vista horizontal primaria", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "week", viewProfile: "wide_default", rangeType: "week", width: 1600, height: 1000,
-    src: /assets\/2026-2027\/q1\/week-horizontal\.webp$/, contentType: "generated-schedule"
-  });
-  await expect(page.locator("html")).toHaveAttribute("data-manual-view", "0");
-  await expectImageHasVisualDetail(page);
-});
-
-test("Space alterna semana ↔ día en escritorio sin recargar", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await page.evaluate(() => { window.__sentinel = "same-document"; });
-  await page.keyboard.press("Space");
-  await expectRendered(page, {
-    kind: "day", viewProfile: "desktop_portrait", rangeType: "day", width: 1080, height: 2160,
-    src: /assets\/2026-2027\/q1\/day-wednesday-vertical\.webp$/, contentType: "generated-schedule"
-  });
-  await expect(page.locator("html")).toHaveAttribute("data-manual-view", "1");
-  await expectImageHasVisualDetail(page);
-  expect(await page.evaluate(() => window.__sentinel)).toBe("same-document");
-  await page.keyboard.press("Space");
-  await expectRendered(page, {
-    kind: "week", viewProfile: "wide_default", width: 1600, height: 1000,
-    src: /assets\/2026-2027\/q1\/week-horizontal\.webp$/, contentType: "generated-schedule"
-  });
-  expect(await page.evaluate(() => window.__sentinel)).toBe("same-document");
-});
-
-test("Space no secuestra inputs, contenteditable ni combinaciones con modificadores", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await page.evaluate(() => {
-    const input = document.createElement("input"); input.id = "test-input"; document.body.append(input);
-    const editable = document.createElement("div"); editable.id = "test-editable"; editable.contentEditable = "true"; document.body.append(editable);
-  });
-  await page.locator("#test-input").focus();
-  await page.keyboard.press("Space");
+test("Space alterna la vista primaria y secundaria sin reload ni scroll", async ({ page }) => {
+  await openDesktop(page);
   await expect(page.locator("html")).toHaveAttribute("data-view-profile", "wide_default");
-  await page.locator("#test-editable").focus();
-  await page.keyboard.press("Space");
-  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "wide_default");
-  await page.locator("body").click({ position: { x: 5, y: 5 } });
-  await page.keyboard.press("Control+Space");
-  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "wide_default");
-});
-
-test("una vista mensual configurable resuelve y renderiza septiembre completo", async ({ page }) => {
-  await useCustomConfig(page, (config) => { config.views.wide_default.range = { type: "month" }; });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "range", viewProfile: "wide_default", rangeType: "month", rangeStart: "2026-09-01", rangeEnd: "2026-09-30",
-    width: 1600, height: 1000, src: /^data:image\/svg\+xml/, contentType: "generated-schedule"
-  });
-});
-
-test("una vista relativa arbitraria expone exactamente su ventana temporal", async ({ page }) => {
-  await useCustomConfig(page, (config) => { config.views.wide_default.range = { type: "relative", before: 2, after: 4 }; });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "range", rangeType: "relative", rangeStart: "2026-09-07", rangeEnd: "2026-09-13",
-    width: 1600, height: 1000, contentType: "generated-schedule"
-  });
-});
-
-test("un intervalo absoluto configurable no depende de la fecha ancla", async ({ page }) => {
-  await useCustomConfig(page, (config) => {
-    config.views.wide_default.range = { type: "interval", start: "2026-09-01", end: "2026-09-30" };
-  });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await expectRendered(page, {
-    kind: "range", rangeType: "interval", rangeStart: "2026-09-01", rangeEnd: "2026-09-30",
-    width: 1600, height: 1000, contentType: "generated-schedule"
-  });
-});
-
-test("ninguna de las dos vistas de escritorio introduce scroll", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
-  await expectNoViewportScroll(page);
+  await expect(page.locator("html")).toHaveAttribute("data-range-type", "week");
+  await page.evaluate(() => { window.__sameDocument = crypto.randomUUID(); });
+  const sentinel = await page.evaluate(() => window.__sameDocument);
   await page.keyboard.press("Space");
   await expect(page.locator("html")).toHaveAttribute("data-view-profile", "desktop_portrait");
+  await expect(page.locator("html")).toHaveAttribute("data-range-type", "day");
+  expect(await page.evaluate(() => window.__sameDocument)).toBe(sentinel);
   await expectNoViewportScroll(page);
+  await page.keyboard.press("Space");
+  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "wide_default");
+  expect(await page.evaluate(() => window.__sameDocument)).toBe(sentinel);
 });
 
-test("offline en iPhone recarga horario y la imagen inactiva obligatoria", async ({ page, context }) => {
+test("Space no actúa mientras Ajustes está abierto", async ({ page }) => {
+  await openDesktop(page);
+  await openSettings(page);
+  await page.keyboard.press("Space");
+  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "wide_default");
+});
+
+test("girar un dispositivo touch cambia de día a semana sin recargar", async ({ page }) => {
+  await openTouch(page);
+  await page.evaluate(() => { window.__orientationSentinel = "alive"; });
+  await page.setViewportSize({ width: 874, height: 402 });
+  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "touch_landscape");
+  await expect(page.locator("html")).toHaveAttribute("data-range-type", "week");
+  expect(await page.evaluate(() => window.__orientationSentinel)).toBe("alive");
   await page.setViewportSize({ width: 402, height: 874 });
-  await page.goto("/?date=2026-10-12", { waitUntil: "load" });
-  await waitForServiceWorker(page);
-  await expect(page.locator("#schedule-image")).toHaveAttribute("src", /no-class-today-vertical\.webp$/);
-  await context.setOffline(true);
-  try {
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await expectRendered(page, {
-      kind: "inactive", calendarStatus: "holiday", width: 1080, height: 2160,
-      src: /no-class-today-vertical\.webp$/, contentType: "image"
-    });
-  } finally { await context.setOffline(false); }
+  await expect(page.locator("html")).toHaveAttribute("data-view-profile", "touch_portrait");
+  expect(await page.evaluate(() => window.__orientationSentinel)).toBe("alive");
 });
 
-test("offline en escritorio conserva WebP semanal y permite Space hacia el día cacheado", async ({ page, context }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?date=2026-09-09", { waitUntil: "load" });
-  await waitForServiceWorker(page);
+test("la GUI puede convertir la vista principal en mensual y persiste tras reload", async ({ page }) => {
+  await openDesktop(page);
+  await openSettings(page);
+  await page.getByLabel("Principal").selectOption("month");
+  await saveSettings(page);
+  await expect(page.locator("html")).toHaveAttribute("data-range-type", "month");
+  await expect(page.locator("html")).toHaveAttribute("data-range-start", "2026-09-01");
+  await expect(page.locator("html")).toHaveAttribute("data-range-end", "2026-09-30");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
+  await expect(page.locator("html")).toHaveAttribute("data-range-type", "month");
+  await expect(page.locator("#demo-hint")).toBeHidden();
+});
+
+test("los weekdays inactivos se pueden eliminar completamente desde la GUI", async ({ page }) => {
+  await openTouch(page, "2026-09-13");
+  await expect(page.locator("html")).toHaveAttribute("data-calendar-status", "inactive-weekday");
+  await openSettings(page);
+  const saturday = page.locator('#inactive-settings input[value="saturday"]');
+  const sunday = page.locator('#inactive-settings input[value="sunday"]');
+  await saturday.uncheck();
+  await sunday.uncheck();
+  await saveSettings(page);
+  await closeSettings(page);
+  await expect(page.locator("html")).toHaveAttribute("data-calendar-status", "normal");
+  await expect(page.locator("html")).toHaveAttribute("data-content-type", "generated-schedule");
+});
+
+test("una imagen local para el estado inactivo se guarda como Blob y sobrevive al reload", async ({ page }) => {
+  await openTouch(page, "2026-10-12");
+  await expect(page.locator("html")).toHaveAttribute("data-calendar-status", "holiday");
+  await openSettings(page);
+  await page.getByRole("tab", { name: "Imágenes" }).click();
+  await chooseImage(page, "Imagen por defecto", {
+    name: "local-default.png",
+    mimeType: "image/png",
+    buffer: PNG_BUFFER
+  });
+  await saveSettings(page);
+  await closeSettings(page);
+  await expect(page.locator("#schedule-image")).toHaveAttribute("src", /^blob:/);
+  await expect.poll(() => page.locator("#schedule-image").evaluate((img) => [img.naturalWidth, img.naturalHeight])).toEqual([3, 2]);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
+  await expect(page.locator("#schedule-image")).toHaveAttribute("src", /^blob:/);
+  await expect.poll(() => page.locator("#schedule-image").evaluate((img) => [img.naturalWidth, img.naturalHeight])).toEqual([3, 2]);
+});
+
+test("un GIF local conserva su MIME y se renderiza mediante Blob", async ({ page }) => {
+  await openTouch(page, "2026-10-12");
+  await openSettings(page);
+  await page.getByRole("tab", { name: "Imágenes" }).click();
+  await chooseImage(page, "Imagen por defecto", {
+    name: "animated.gif",
+    mimeType: "image/gif",
+    buffer: GIF_BUFFER
+  });
+  await saveSettings(page);
+  await closeSettings(page);
+  await expect(page.locator("#schedule-image")).toHaveAttribute("src", /^blob:/);
+  const types = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open("schedule-viewer-local");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    const tx = db.transaction("assets", "readonly");
+    const records = await new Promise((resolve, reject) => {
+      const req = tx.objectStore("assets").getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    return records.map((item) => item.mimeType);
+  });
+  expect(types).toContain("image/gif");
+});
+
+test("guardar cualquier personalización elimina el aviso de demo", async ({ page }) => {
+  await openTouch(page);
+  await expect(page.locator("#demo-hint")).toBeVisible();
+  await openSettings(page);
+  await page.getByLabel("Vertical").selectOption("month");
+  await saveSettings(page);
+  await expect(page.locator("#demo-hint")).toBeHidden();
+  await closeSettings(page);
+  await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
+});
+
+test("exportar .schedule, restablecer e importar restaura configuración e imagen", async ({ page }) => {
+  await openTouch(page, "2026-10-12");
+  await openSettings(page);
+  await page.getByRole("tab", { name: "Imágenes" }).click();
+  await chooseImage(page, "Imagen por defecto", {
+    name: "backup.png",
+    mimeType: "image/png",
+    buffer: PNG_BUFFER
+  });
+  await saveSettings(page);
+  await page.getByRole("tab", { name: "Copia de seguridad" }).click();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#backup-export").click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.schedule$/);
+  const downloadPath = await download.path();
+  expect(downloadPath).toBeTruthy();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#backup-reset").click();
+  await expect(page.locator("html")).toHaveAttribute("data-config-source", "demo");
+  await page.getByRole("tab", { name: "Copia de seguridad" }).click();
+
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.locator("#backup-import").click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles(downloadPath);
+  await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
+  await closeSettings(page);
+  await expect(page.locator("#schedule-image")).toHaveAttribute("src", /^blob:/);
+  await expect.poll(() => page.locator("#schedule-image").evaluate((img) => [img.naturalWidth, img.naturalHeight])).toEqual([3, 2]);
+});
+
+test("CodeMirror/Lezer no se descarga al abrir la app y sí al abrir Editar YAML", async ({ page }) => {
+  const requested = [];
+  page.on("request", (request) => requested.push(request.url()));
+  await openDesktop(page);
+  expect(requested.some((url) => url.includes("lazy/yaml-editor.js"))).toBe(false);
+  await openSettings(page);
+  await page.getByRole("tab", { name: "Avanzado" }).click();
+  expect(requested.some((url) => url.includes("lazy/yaml-editor.js"))).toBe(false);
+  await page.locator("#yaml-edit").click();
+  await expect(page.locator("html")).toHaveAttribute("data-yaml-editor-loaded", "1");
+  await expect(page.locator(".cm-editor")).toBeVisible();
+  expect(requested.some((url) => url.includes("lazy/yaml-editor.js"))).toBe(true);
+});
+
+test("el editor YAML detecta errores sintácticos y bloquea Aplicar", async ({ page }) => {
+  await openDesktop(page);
+  await openSettings(page);
+  await page.getByRole("tab", { name: "Avanzado" }).click();
+  await page.locator("#yaml-edit").click();
+  const editor = page.locator(".cm-content");
+  await editor.click();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.insertText("version: [\n");
+  await expect(page.locator("#yaml-status")).not.toHaveText("YAML válido.");
+  await expect(page.locator("#yaml-apply")).toBeDisabled();
+  await expect(page.locator(".cm-diagnostic-error")).toHaveCount(1, { timeout: 5_000 });
+});
+
+test("el editor YAML detecta errores semánticos de Schedule Viewer", async ({ page }) => {
+  await openDesktop(page);
+  await openSettings(page);
+  await page.getByRole("tab", { name: "Avanzado" }).click();
+  await page.locator("#yaml-edit").click();
+  const editor = page.locator(".cm-content");
+  await editor.click();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.insertText("version: 3\n");
+  await expect(page.locator("#yaml-status")).toContainText("app");
+  await expect(page.locator("#yaml-apply")).toBeDisabled();
+});
+
+test("un YAML válido puede aplicarse y pasa a ser configuración local", async ({ page }) => {
+  await openDesktop(page);
+  await openSettings(page);
+  await page.getByRole("tab", { name: "Avanzado" }).click();
+  await page.locator("#yaml-edit").click();
+  await expect(page.locator("#yaml-status")).toHaveText("YAML válido.");
+  await expect(page.locator("#yaml-apply")).toBeEnabled();
+  await page.locator("#yaml-apply").click();
+  await expect(page.locator("#yaml-status")).toHaveText("YAML aplicado y guardado.");
+  await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
+});
+
+test("vacaciones horizontales usan su imagen y los festivos horizontales mantienen el horario", async ({ page }) => {
+  await openTouch(page, "2026-12-25", { width: 874, height: 402 });
+  await expect(page.locator("html")).toHaveAttribute("data-calendar-status", "vacation");
+  await expect(page.locator("#schedule-image")).toHaveAttribute("src", /assets\/states\/vacations-horizontal\.webp$/);
+  await page.goto("/?date=2026-10-12", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-calendar-status", "holiday");
+  await expect(page.locator("html")).toHaveAttribute("data-content-type", "generated-schedule");
+});
+
+test("la configuración y un asset local siguen funcionando offline junto con Ajustes", async ({ page, context }) => {
+  await openTouch(page, "2026-10-12");
+  await waitForServiceWorkerControl(page);
+  await openSettings(page);
+  await page.getByRole("tab", { name: "Imágenes" }).click();
+  await chooseImage(page, "Imagen por defecto", {
+    name: "offline.png",
+    mimeType: "image/png",
+    buffer: PNG_BUFFER
+  });
+  await saveSettings(page);
+  await closeSettings(page);
+  await expect(page.locator("#schedule-image")).toHaveAttribute("src", /^blob:/);
+
   await context.setOffline(true);
-  try {
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await expectRendered(page, {
-      kind: "week", viewProfile: "wide_default", width: 1600, height: 1000,
-      src: /week-horizontal\.webp$/, contentType: "generated-schedule"
-    });
-    await page.keyboard.press("Space");
-    await expectRendered(page, {
-      kind: "day", viewProfile: "desktop_portrait", width: 1080, height: 2160,
-      src: /day-wednesday-vertical\.webp$/, contentType: "generated-schedule"
-    });
-  } finally { await context.setOffline(false); }
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
+  await expect(page.locator("#schedule-image")).toHaveAttribute("src", /^blob:/);
+  await openSettings(page);
+  await expect(page.getByLabel("Vertical")).toBeVisible();
+  await page.getByLabel("Vertical").selectOption("month");
+  await saveSettings(page);
+  await expect(page.locator("html")).toHaveAttribute("data-range-type", "month");
+  await context.setOffline(false);
+});
+
+test("el Service Worker no borra una cache v3 antes de la migración", async ({ page }) => {
+  await openDesktop(page);
+  await waitForServiceWorkerControl(page);
+  const cacheState = await page.evaluate(async () => {
+    await caches.open("schedule-viewer-offline-v3-synthetic");
+    const registration = await navigator.serviceWorker.getRegistration();
+    await registration.update();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return caches.keys();
+  });
+  expect(cacheState).toContain("schedule-viewer-offline-v3-synthetic");
 });
