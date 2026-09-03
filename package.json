@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/schedule-core.test.mjs && node tests/content-renderer.test.mjs && node tests/runtime-renderer.test.mjs && node tests/service-worker.test.mjs && node tests/config-schema.test.mjs && node tests/device-ui.test.mjs && node tests/local-store.test.mjs && node tests/config-io.test.mjs",
+    "test": "node tests/app-module-graph.test.mjs && node tests/schedule-core.test.mjs && node tests/content-renderer.test.mjs && node tests/runtime-renderer.test.mjs && node tests/service-worker.test.mjs && node tests/config-schema.test.mjs && node tests/device-ui.test.mjs && node tests/local-store.test.mjs && node tests/config-io.test.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
