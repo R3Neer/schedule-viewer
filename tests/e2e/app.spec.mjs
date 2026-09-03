@@ -260,13 +260,20 @@ test.describe("Escritorio", () => {
   test("Ctrl+, abre, Escape cierra y desactivar Space persiste", async ({ page }) => {
     await page.goto("/?date=2026-09-09");
     await page.keyboard.down("Control"); await page.keyboard.press(","); await page.keyboard.up("Control");
-    await expect(page.locator("#settings-dialog")).toBeVisible();
+    const dialog = page.locator("#settings-dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((node) => {
+      node.tabIndex = -1;
+      node.focus({ preventScroll: true });
+    });
     await page.keyboard.press("Space");
+    await expect(dialog).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-view-profile", "wide_default");
     const toggle = page.locator(".switch-row input[type=checkbox]");
     await toggle.uncheck();
     await saveSettings(page);
     await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
     await page.keyboard.press("Space");
     await expect(page.locator("html")).toHaveAttribute("data-view-profile", "wide_default");
     await page.reload();
