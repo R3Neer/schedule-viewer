@@ -16,14 +16,16 @@ export function normalizeContentDescriptor(descriptor, defaults = {}) {
   if (descriptor.type !== "image") {
     throw new TypeError(`Tipo de contenido externo desconocido: ${descriptor.type ?? "(sin type)"}`);
   }
-  if (typeof descriptor.src !== "string" || !descriptor.src) {
-    throw new TypeError("El contenido image requiere src.");
+  const hasSrc = typeof descriptor.src === "string" && Boolean(descriptor.src);
+  const hasAsset = typeof descriptor.asset === "string" && Boolean(descriptor.asset);
+  if (hasSrc === hasAsset) {
+    throw new TypeError("El contenido image requiere exactamente uno de src o asset.");
   }
   const fit = descriptor.fit ?? defaults.fit ?? "contain";
   if (!IMAGE_FITS.has(fit)) throw new TypeError(`object-fit no soportado: ${fit}`);
   return {
     type: "image",
-    src: descriptor.src,
+    ...(hasSrc ? { src: descriptor.src } : { asset: descriptor.asset }),
     fit,
     alt: descriptor.alt ?? defaults.alt
   };
@@ -31,6 +33,18 @@ export function normalizeContentDescriptor(descriptor, defaults = {}) {
 
 function imageFromEntry(entry, defaults = {}) {
   return entry?.image ? normalizeContentDescriptor(entry.image, defaults) : null;
+}
+
+export function resolveDefaultInactiveContent(config, evaluation = {}) {
+  const fallback = config.calendar?.inactive?.defaultImage;
+  if (!fallback) throw new Error("Falta calendar.inactive.defaultImage.");
+  return {
+    ...normalizeContentDescriptor(fallback, {
+      fit: config.defaults?.imageFit ?? "contain",
+      alt: evaluation.label ?? "Día inactivo"
+    }),
+    source: "default"
+  };
 }
 
 export function resolveInactiveContent(config, evaluation) {
@@ -46,13 +60,7 @@ export function resolveInactiveContent(config, evaluation) {
   if (period) return { ...period, source: `period:${evaluation.matches.period.id}` };
   const weekday = imageFromEntry(evaluation.matches?.inactiveWeekday, defaults);
   if (weekday) return { ...weekday, source: `weekday:${evaluation.weekday}` };
-
-  const fallback = config.calendar?.inactive?.defaultImage;
-  if (!fallback) throw new Error("Falta calendar.inactive.defaultImage.");
-  return {
-    ...normalizeContentDescriptor(fallback, defaults),
-    source: "default"
-  };
+  return resolveDefaultInactiveContent(config, evaluation);
 }
 
 function valueMatches(expected, actual) {
@@ -257,16 +265,16 @@ export function selectScheduleContent(config, {
 export function selectScheduleAsset(config, options) {
   const selection = selectScheduleContent(config, options);
   const path = selection.content.type === "image"
-    ? selection.content.src
+    ? selection.content.src ?? null
     : selection.content.fallbackSrc;
-  return { ...selection, path: path ?? null };
+  return { ...selection, path: path ?? null, assetId: selection.content.asset ?? null };
 }
 
 function collectImageDescriptor(paths, descriptor) {
   if (!descriptor) return;
   try {
     const content = normalizeContentDescriptor(descriptor);
-    if (!/^(?:data|blob):/i.test(content.src)) paths.add(content.src);
+    if (content.src && !/^(?:data|blob):/i.test(content.src)) paths.add(content.src);
   } catch {
     // Internal rule descriptors are not image descriptors.
   }

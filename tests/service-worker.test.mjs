@@ -9,6 +9,7 @@ let claimed = false;
 
 const context = {
   URL,
+  Response,
   console,
   caches: {
     async keys() {
@@ -17,6 +18,7 @@ const context = {
         "schedule-viewer-offline-v2-content",
         "schedule-viewer-old",
         "schedule-viewer-offline-v3",
+        "schedule-viewer-offline-v4",
         "another-app-cache"
       ];
     },
@@ -51,7 +53,7 @@ const config = {
       defaultImage: { type: "image", src: "assets/inactive/default.webp" }
     },
     inactiveWeekdays: {
-      sunday: { image: { type: "image", src: "assets/inactive/sunday.gif" } }
+      sunday: { image: { type: "image", asset: "sunday-local" } }
     }
   },
   academicYears: [{
@@ -85,12 +87,12 @@ assert.deepEqual(paths, [
   "https://example.test/schedule-viewer/assets/custom/rule.avif",
   "https://example.test/schedule-viewer/assets/inactive/christmas.svg",
   "https://example.test/schedule-viewer/assets/inactive/default.webp",
-  "https://example.test/schedule-viewer/assets/inactive/sunday.gif",
   "https://example.test/schedule-viewer/assets/q1/monday.webp",
   "https://example.test/schedule-viewer/assets/q1/week.webp",
   "https://example.test/schedule-viewer/assets/states/inactive.webp",
   "https://example.test/schedule-viewer/assets/states/vacations.webp"
 ]);
+assert.ok(!paths.some((path) => path.includes("sunday-local")), "los Blob de IndexedDB no deben duplicarse en Cache Storage");
 
 let activation = null;
 listeners.get("activate")({
@@ -100,14 +102,18 @@ await activation;
 
 assert.deepEqual(deletedCaches.sort(), [
   "schedule-viewer-offline-v2-content",
+  "schedule-viewer-offline-v3",
   "schedule-viewer-old",
   "ucm-scheduler-offline-v1"
 ].sort());
 assert.equal(claimed, true);
 
 assert.match(code, /config\/schedule\.json/);
-assert.match(code, /offline-v3/);
+assert.match(code, /offline-v4/);
 assert.match(code, /discoverImageDescriptors/);
 assert.match(code, /ignoreSearch/);
+assert.match(code, /local-store\.js/);
+assert.doesNotMatch(code, /lazy\/yaml-editor\.js/, "CodeMirror no debe precachearse en el arranque");
+assert.doesNotMatch(code, /lazy\/config-io\.js/, "el bundle de import/export también debe ser bajo demanda");
 
-console.log("service-worker v3: descubre imágenes anidadas, filtra remotos/data y limpia cachés legacy OK");
+console.log("service-worker v4: app cache separada de IndexedDB, lazy real y limpieza legacy OK");

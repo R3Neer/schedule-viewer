@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -33,11 +34,13 @@ def is_local_path(src: str) -> bool:
 
 def verify_assets(config: dict, out: Path) -> None:
     expected = set(iter_image_sources(config))
-    expected.update(config.get("states", {}).values())
+    expected.update(path for path in config.get("states", {}).values() if isinstance(path, str) and path)
     for year in config.get("academicYears", []):
         for term in year.get("terms", []):
-            expected.add(term["assets"]["week"])
-            expected.update(term["assets"]["days"].values())
+            week = term.get("assets", {}).get("week")
+            if week:
+                expected.add(week)
+            expected.update(path for path in term.get("assets", {}).get("days", {}).values() if path)
 
     missing = sorted(
         src for src in expected
@@ -48,6 +51,32 @@ def verify_assets(config: dict, out: Path) -> None:
     if missing:
         joined = "\n".join(f"  - {path}" for path in missing)
         raise SystemExit(f"Build abortado: faltan assets locales referenciados:\n{joined}")
+
+
+def build_lazy_bundles(out: Path) -> None:
+    lazy_out = out / "lazy"
+    lazy_out.mkdir(parents=True, exist_ok=True)
+    npx = shutil.which("npx") or shutil.which("npx.cmd")
+    if not npx:
+        raise SystemExit("Build abortado: npm/npx no está disponible para empaquetar los módulos opcionales.")
+
+    entries = {
+        ROOT / "lazy-src" / "config-io.entry.js": lazy_out / "config-io.js",
+        ROOT / "lazy-src" / "yaml-editor.entry.js": lazy_out / "yaml-editor.js",
+    }
+    for entry, output in entries.items():
+        subprocess.run([
+            npx,
+            "--no-install",
+            "esbuild",
+            str(entry),
+            "--bundle",
+            "--format=esm",
+            "--platform=browser",
+            "--target=es2022",
+            "--minify",
+            f"--outfile={output}",
+        ], cwd=ROOT, check=True)
 
 
 def main():
@@ -73,6 +102,12 @@ def main():
         "calendar-core.js",
         "content-core.js",
         "content-renderer.js",
+        "runtime-renderer.js",
+        "local-store.js",
+        "asset-resolver.js",
+        "device-ui.js",
+        "config-schema.js",
+        "settings-ui.js",
         "service-worker.js",
     ):
         shutil.copy2(ROOT / filename, out / filename)
@@ -88,7 +123,8 @@ def main():
 
     render_all(compiled_path, out)
     verify_assets(config, out)
-    print(f"Build v3 generado en {out}")
+    build_lazy_bundles(out)
+    print(f"Build v4 generado en {out}")
 
 
 if __name__ == "__main__":

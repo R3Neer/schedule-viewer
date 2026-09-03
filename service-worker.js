@@ -1,6 +1,6 @@
 const CACHE_PREFIX = "schedule-viewer-";
-const LEGACY_CACHE_PREFIXES = ["ucm-scheduler-", "schedule-viewer-offline-v2"];
-const CACHE_NAME = `${CACHE_PREFIX}offline-v3`;
+const LEGACY_CACHE_PREFIXES = ["ucm-scheduler-", "schedule-viewer-offline-v2", "schedule-viewer-offline-v3"];
+const CACHE_NAME = `${CACHE_PREFIX}offline-v4`;
 const SCOPE = self.registration.scope;
 
 const CORE_PATHS = [
@@ -14,7 +14,13 @@ const CORE_PATHS = [
   "./view-core.js",
   "./calendar-core.js",
   "./content-core.js",
-  "./content-renderer.js"
+  "./content-renderer.js",
+  "./runtime-renderer.js",
+  "./local-store.js",
+  "./asset-resolver.js",
+  "./device-ui.js",
+  "./config-schema.js",
+  "./settings-ui.js"
 ];
 
 function scoped(path) {
@@ -39,33 +45,22 @@ function discoverImageDescriptors(paths, node) {
   }
   if (typeof node !== "object") return;
 
-  if (node.type === "image" && typeof node.src === "string") {
-    addLocalAsset(paths, node.src);
-  }
-
-  for (const value of Object.values(node)) {
-    discoverImageDescriptors(paths, value);
-  }
+  if (node.type === "image" && typeof node.src === "string") addLocalAsset(paths, node.src);
+  for (const value of Object.values(node)) discoverImageDescriptors(paths, value);
 }
 
 function scheduleAssetPaths(config) {
   const paths = new Set();
-
-  for (const path of Object.values(config.states ?? {})) {
-    addLocalAsset(paths, path);
-  }
-
+  for (const path of Object.values(config.states ?? {})) addLocalAsset(paths, path);
   for (const year of config.academicYears ?? []) {
     for (const term of year.terms ?? []) {
       addLocalAsset(paths, term.assets?.week);
       for (const path of Object.values(term.assets?.days ?? {})) addLocalAsset(paths, path);
     }
   }
-
   discoverImageDescriptors(paths, config.calendar);
   discoverImageDescriptors(paths, config.rules);
   discoverImageDescriptors(paths, config.academicYears);
-
   return [...paths];
 }
 
@@ -85,11 +80,7 @@ self.addEventListener("install", (event) => {
     const cache = await caches.open(CACHE_NAME);
     const configUrl = scoped("./config/schedule.json");
     const configResponse = await fetch(configUrl, { cache: "reload" });
-
-    if (!configResponse.ok) {
-      throw new Error(`No se pudo precachear schedule.json: ${configResponse.status}`);
-    }
-
+    if (!configResponse.ok) throw new Error(`No se pudo precachear schedule.json: ${configResponse.status}`);
     const config = await configResponse.clone().json();
     await cache.put(configUrl, configResponse.clone());
     await cache.addAll(CORE_PATHS.map(scoped));
@@ -150,7 +141,6 @@ async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cachedIgnoringVersion(cache, request);
   if (cached) return cached;
-
   try {
     const response = await fetch(request);
     if (response.ok) await cache.put(request, response.clone());
@@ -166,7 +156,6 @@ async function cacheFirst(request) {
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
-
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
@@ -174,11 +163,9 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(networkFirstConfig(request));
     return;
   }
-
   if (request.mode === "navigate") {
     event.respondWith(networkFirstNavigation(request));
     return;
   }
-
   event.respondWith(cacheFirst(request));
 });

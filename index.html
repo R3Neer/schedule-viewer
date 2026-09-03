@@ -4,19 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#F4F7FB">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>Schedule Viewer</title>
-  <link rel="stylesheet" href="./styles.css?v=20260903-v3">
+  <link rel="stylesheet" href="./styles.css?v=20260903-v4">
   <script type="importmap">
     {
       "imports": {
-        "./schedule-core.js": "./schedule-core.js?v=20260903-v3",
-        "./date-core.js": "./date-core.js?v=20260903-v3",
-        "./range-core.js": "./range-core.js?v=20260903-v3",
-        "./view-core.js": "./view-core.js?v=20260903-v3",
-        "./calendar-core.js": "./calendar-core.js?v=20260903-v3",
-        "./content-core.js": "./content-core.js?v=20260903-v3",
-        "./content-renderer.js": "./content-renderer.js?v=20260903-v3"
+        "./schedule-core.js": "./schedule-core.js?v=20260903-v4",
+        "./date-core.js": "./date-core.js?v=20260903-v4",
+        "./range-core.js": "./range-core.js?v=20260903-v4",
+        "./view-core.js": "./view-core.js?v=20260903-v4",
+        "./calendar-core.js": "./calendar-core.js?v=20260903-v4",
+        "./content-core.js": "./content-core.js?v=20260903-v4",
+        "./content-renderer.js": "./content-renderer.js?v=20260903-v4",
+        "./runtime-renderer.js": "./runtime-renderer.js?v=20260903-v4",
+        "./local-store.js": "./local-store.js?v=20260903-v4",
+        "./asset-resolver.js": "./asset-resolver.js?v=20260903-v4",
+        "./device-ui.js": "./device-ui.js?v=20260903-v4",
+        "./config-schema.js": "./config-schema.js?v=20260903-v4",
+        "./settings-ui.js": "./settings-ui.js?v=20260903-v4"
       }
     }
   </script>
@@ -26,6 +32,88 @@
     <img id="schedule-image" class="schedule-image" alt="Schedule Viewer" decoding="async">
     <p id="error-message" class="error-message" role="alert" hidden></p>
   </main>
+
+  <button id="settings-button" class="settings-fab" type="button" aria-label="Abrir Ajustes">
+    <span aria-hidden="true">⚙</span>
+  </button>
+
+  <button id="demo-hint" class="demo-hint" type="button" hidden>
+    <span aria-hidden="true">⚙</span>
+    <span>Personaliza tu horario desde Ajustes</span>
+  </button>
+
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+    <div class="settings-sheet">
+      <header class="settings-header">
+        <div>
+          <p id="settings-source" class="settings-source">Configuración demo</p>
+          <h2 id="settings-title">Ajustes</h2>
+        </div>
+        <button id="settings-close" class="icon-button" type="button" aria-label="Cerrar Ajustes">×</button>
+      </header>
+
+      <nav class="settings-tabs" aria-label="Secciones de Ajustes" role="tablist">
+        <button type="button" data-settings-tab="schedule" role="tab" aria-selected="true">Horario</button>
+        <button type="button" data-settings-tab="images" role="tab" aria-selected="false">Imágenes</button>
+        <button type="button" data-settings-tab="backup" role="tab" aria-selected="false">Copia de seguridad</button>
+        <button type="button" data-settings-tab="advanced" role="tab" aria-selected="false">Avanzado</button>
+      </nav>
+
+      <div class="settings-scroll">
+        <section id="settings-schedule-panel" data-settings-panel="schedule" class="settings-panel">
+          <div id="view-settings"></div>
+          <div id="inactive-settings"></div>
+        </section>
+
+        <section id="settings-images-panel" data-settings-panel="images" class="settings-panel" hidden>
+          <div class="settings-card intro-card">
+            <h3>Imágenes</h3>
+            <p>La imagen por defecto siempre existe. Puedes sustituirla y añadir imágenes específicas para días, festivos o periodos.</p>
+          </div>
+          <div id="image-settings" class="image-settings"></div>
+        </section>
+
+        <section id="settings-backup-panel" data-settings-panel="backup" class="settings-panel" hidden>
+          <div class="settings-card">
+            <h3>Copia completa</h3>
+            <p>El archivo <code>.schedule</code> incluye el YAML y todas las imágenes guardadas en este dispositivo.</p>
+            <div class="button-stack">
+              <button id="backup-export" type="button" class="primary-button">Exportar configuración</button>
+              <button id="backup-import" type="button" class="secondary-button">Importar configuración</button>
+            </div>
+          </div>
+          <div class="settings-card danger-card">
+            <h3>Restablecer</h3>
+            <p>Vuelve a la demostración y elimina la configuración y los assets locales.</p>
+            <button id="backup-reset" type="button" class="danger-button">Restablecer configuración demo</button>
+          </div>
+        </section>
+
+        <section id="settings-advanced-panel" data-settings-panel="advanced" class="settings-panel" hidden>
+          <div class="settings-card">
+            <h3>YAML</h3>
+            <p>El editor avanzado se descarga solo cuando lo abres. Usa CodeMirror 6, Lezer y validación semántica de Schedule Viewer.</p>
+            <div class="button-row">
+              <button id="yaml-edit" type="button" class="primary-button">Editar YAML</button>
+              <button id="yaml-import" type="button" class="secondary-button">Importar solo YAML</button>
+              <button id="yaml-export" type="button" class="secondary-button">Exportar solo YAML</button>
+            </div>
+            <div id="yaml-editor-host" class="yaml-editor-host" hidden></div>
+            <div class="button-row yaml-actions">
+              <button id="yaml-validate" type="button" class="secondary-button" disabled>Validar</button>
+              <button id="yaml-apply" type="button" class="primary-button" disabled>Aplicar</button>
+            </div>
+            <p id="yaml-status" class="settings-status" aria-live="polite"></p>
+          </div>
+        </section>
+      </div>
+
+      <footer class="settings-footer">
+        <p id="settings-status" class="settings-status" aria-live="polite"></p>
+        <button id="settings-save" type="button" class="primary-button" disabled>Guardar cambios</button>
+      </footer>
+    </div>
+  </dialog>
 
   <script>
     if ("serviceWorker" in navigator) {
@@ -44,6 +132,6 @@
       });
     }
   </script>
-  <script type="module" src="./app.js?v=20260903-v3"></script>
+  <script type="module" src="./app.js?v=20260903-v4"></script>
 </body>
 </html>

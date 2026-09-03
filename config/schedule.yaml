@@ -2,14 +2,18 @@ version: 3
 app:
   title: Schedule Viewer
   timezone: Europe/Madrid
+
 defaults:
   week_starts_on: monday
   image_fit: contain
+
 runtime:
   allow_date_override: true
+  demo: true
+
 visual:
-  brand: UCM · FdI
-  title: Ingeniería Informática
+  brand: Schedule Viewer
+  title: Horario de ejemplo
   palette:
     background: '#F4F7FB'
     paper: '#FFFFFF'
@@ -18,396 +22,275 @@ visual:
     line: '#D9E2EC'
     navy: '#173F68'
     navySoft: '#EAF2FA'
+
 states:
   inactive_default: assets/states/no-class-today-vertical.webp
   vacations: assets/states/vacations-horizontal.webp
+
 calendar:
   inactive:
     default_image:
       src: assets/states/no-class-today-vertical.webp
-      alt: Sin clases hoy
+      alt: Sin actividades hoy
       fit: contain
   inactive_weekdays:
-  - saturday
-  - sunday
+    - saturday
+    - sunday
   active_dates: []
   inactive_dates: []
+
 views:
-  phone_portrait:
-    priority: 100
+  touch_portrait:
+    priority: 200
     when:
       orientation: portrait
-      max_width: 760
+      pointer: coarse
     range: day
     renderer:
       type: timetable
       artwork: phone
-  phone_landscape:
-    priority: 100
+
+  touch_landscape:
+    priority: 200
     when:
       orientation: landscape
-      max_width: 950
-      max_height: 520
+      pointer: coarse
     range:
       type: week
       starts_on: monday
     renderer:
       type: timetable
       artwork: phone
+
   wide_default:
-    priority: 10
+    priority: 20
     when:
       min_width: 761
+      pointer: fine
     range:
       type: week
       starts_on: monday
     renderer:
       type: timetable
       artwork: asset
+
   desktop_portrait:
     manual_only: true
     range: day
     renderer:
       type: timetable
       artwork: asset
+
 desktop:
   when:
     min_width: 1000
+    pointer: fine
   primary_view: wide_default
   secondary_view: desktop_portrait
   default_view: wide_default
   shortcuts:
     toggle_view:
       key: Space
+
 academic_years:
-- id: 2026-2027
-  display_name: Curso 2026–2027
-  calendar:
-    sources:
-      academicCalendar: https://informatica.ucm.es/calendario-academico
-      festivities: https://web.fdi.ucm.es/alumnos/Cal_Academico.aspx
+  - id: demo-2026-2027
+    display_name: Ejemplo 2026–2027
+    calendar:
+      terms:
+        - term_id: q1
+          start: '2026-09-01'
+          end: '2026-12-18'
+        - term_id: q2
+          start: '2027-01-11'
+          end: '2027-05-14'
+      holidays:
+        - date: '2026-10-12'
+          label: Día festivo de ejemplo
+      inactive_dates:
+        - date: '2026-11-13'
+          label: Día no lectivo de ejemplo
+      periods:
+        - id: winter-break
+          type: vacation
+          label: Vacaciones de invierno
+          start: '2026-12-19'
+          end: '2027-01-10'
+        - id: spring-break
+          type: vacation
+          label: Descanso de primavera
+          start: '2027-03-22'
+          end: '2027-03-28'
+
     terms:
-    - term_id: q1
-      start: '2026-09-07'
-      end: '2026-12-11'
-    - term_id: q2
-      start: '2027-01-25'
-      end: '2027-05-07'
-    holidays:
-    - date: '2026-10-12'
-      label: Fiesta Nacional de España
-    - date: '2026-11-02'
-      label: Traslado de Todos los Santos
-    - date: '2026-11-09'
-      label: Fiesta local de Madrid
-    - date: '2026-12-06'
-      label: Día de la Constitución
-    - date: '2026-12-08'
-      label: Inmaculada Concepción
-    - date: '2027-05-01'
-      label: Fiesta del Trabajo
-    - date: '2027-05-02'
-      label: Fiesta de la Comunidad de Madrid
-    - date: '2027-05-15'
-      label: San Isidro
-    inactive_dates:
-    - date: '2026-11-13'
-      label: San Alberto Magno
-    - date: '2027-01-29'
-      label: Santo Tomás de Aquino
-    periods:
-    - id: winter-interterm
-      type: vacation
-      label: Periodo no lectivo entre cuatrimestres
-      start: '2026-12-12'
-      end: '2027-01-24'
-    - id: easter
-      type: vacation
-      label: Semana Santa
-      start: '2027-03-19'
-      end: '2027-03-29'
-    - id: summer
-      type: vacation
-      label: Vacaciones de verano
-      start: '2027-05-08'
-      end: '2027-09-06'
-  terms:
-  - id: q1
-    display_name: 1er Cuatrimestre
-    subtitle: '3ºA · Optativa: Interfaces de Usuario'
-    assets:
-      week: assets/2026-2027/q1/week-horizontal.webp
-      days:
-        monday: assets/2026-2027/q1/day-monday-vertical.webp
-        tuesday: assets/2026-2027/q1/day-tuesday-vertical.webp
-        wednesday: assets/2026-2027/q1/day-wednesday-vertical.webp
-        thursday: assets/2026-2027/q1/day-thursday-vertical.webp
-        friday: assets/2026-2027/q1/day-friday-vertical.webp
-    subjects:
-      RED:
-        name: Redes
-        short: Redes
-        group: 3ºA
-        room: Aula 9
-        fill: '#DDEEFF'
-        accent: '#2867A6'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-803269
-      SO:
-        name: Sistemas Operativos
-        short: Sistemas Operativos
-        group: 3ºA
-        room: Aula 9
-        fill: '#DFF3E4'
-        accent: '#2F7A4E'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-803268
-      IA1:
-        name: Inteligencia Artificial I
-        short: IA I
-        group: 3ºA
-        room: Aula 9
-        fill: '#EEE6FA'
-        accent: '#6D4AA5'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-805353
-      MARPI:
-        name: Métodos Algorítmicos en Resolución de Problemas I
-        short: Métodos Alg. I
-        group: 3ºA
-        room: Aula 9
-        fill: '#FFF1C9'
-        accent: '#9A6A00'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-805348
-      PD:
-        name: Programación Declarativa
-        short: Programación Declarativa
-        group: 3ºA
-        room: Aula 9
-        fill: '#FFE5D4'
-        accent: '#A64B1D'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-803275
-      IU:
-        name: Interfaces de Usuario
-        short: Interfaces de Usuario
-        group: A
-        room: Aula 16
-        fill: '#DDF4F3'
-        accent: '#287C78'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-803352
-    sessions:
-    - day: monday
-      start: 09:00
-      end: '11:00'
-      subject: RED
-    - day: monday
-      start: '11:00'
-      end: '13:00'
-      subject: IA1
-    - day: monday
-      start: '14:00'
-      end: '16:00'
-      subject: IU
-    - day: tuesday
-      start: 09:00
-      end: '11:00'
-      subject: SO
-    - day: tuesday
-      start: '11:00'
-      end: '12:00'
-      subject: IA1
-    - day: tuesday
-      start: '12:00'
-      end: '13:00'
-      subject: MARPI
-    - day: wednesday
-      start: '11:00'
-      end: '13:00'
-      subject: MARPI
-    - day: wednesday
-      start: '14:00'
-      end: '16:00'
-      subject: IU
-    - day: thursday
-      start: 09:00
-      end: '11:00'
-      subject: SO
-    - day: thursday
-      start: '11:00'
-      end: '13:00'
-      subject: PD
-    - day: friday
-      start: '11:00'
-      end: '13:00'
-      subject: PD
-  - id: q2
-    display_name: 2º Cuatrimestre
-    subtitle: '3ºA · ISII 2ºB · Optativa: Ingeniería Web'
-    assets:
-      week: assets/2026-2027/q2/week-horizontal.webp
-      days:
-        monday: assets/2026-2027/q2/day-monday-vertical.webp
-        tuesday: assets/2026-2027/q2/day-tuesday-vertical.webp
-        wednesday: assets/2026-2027/q2/day-wednesday-vertical.webp
-        thursday: assets/2026-2027/q2/day-thursday-vertical.webp
-        friday: assets/2026-2027/q2/day-friday-vertical.webp
-    subjects:
-      IA2:
-        name: Inteligencia Artificial II
-        short: IA II
-        group: 3ºA
-        room: Aula 9
-        fill: '#EEE6FA'
-        accent: '#6D4AA5'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-805354
-      MARPII:
-        name: Métodos Algorítmicos en Resolución de Problemas II
-        short: Métodos Alg. II
-        group: 3ºA
-        room: Aula 9
-        fill: '#FFF1C9'
-        accent: '#9A6A00'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-805349
-      FLI:
-        name: Fundamentos de los Lenguajes Informáticos
-        short: Fund. Lenguajes
-        group: 3ºA
-        room: Aula 9
-        fill: '#E0F1E6'
-        accent: '#367253'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-803277
-      PC:
-        name: Programación Concurrente
-        short: Prog. Concurrente
-        group: 3ºA
-        room: Aula 9
-        fill: '#FFE5D4'
-        accent: '#A64B1D'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-803274
-      IW:
-        name: Ingeniería Web
-        short: Ingeniería Web
-        group: A
-        room: Aula 4
-        fill: '#DDEEFF'
-        accent: '#2867A6'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-803297
-      ISII:
-        name: Ingeniería del Software II
-        short: ISII
-        group: 2ºB
-        room: Aula 2
-        fill: '#F8DEEA'
-        accent: '#A3406B'
-        source: https://informatica.ucm.es/estudios/grado-ingenieriainformatica2019ext-plan-805347
-    sessions:
-    - day: monday
-      start: 09:00
-      end: '11:00'
-      subject: IA2
-    - day: monday
-      start: '13:00'
-      end: '15:00'
-      subject: IW
-    - day: tuesday
-      start: 09:00
-      end: '11:00'
-      subject: FLI
-    - day: tuesday
-      start: '11:00'
-      end: '12:00'
-      subject: PC
-    - day: tuesday
-      start: '13:00'
-      end: '15:00'
-      subject: IW
-    - day: wednesday
-      start: 09:00
-      end: '10:00'
-      subject: IA2
-    - day: wednesday
-      start: '10:00'
-      end: '12:00'
-      subject: MARPII
-    - day: wednesday
-      start: '18:00'
-      end: '19:00'
-      subject: ISII
-    - day: thursday
-      start: 09:00
-      end: '10:00'
-      subject: FLI
-    - day: thursday
-      start: '10:00'
-      end: '12:00'
-      subject: PC
-    - day: thursday
-      start: '17:00'
-      end: '19:00'
-      subject: ISII
-    - day: friday
-      start: 09:00
-      end: '10:00'
-      subject: FLI
-    - day: friday
-      start: '10:00'
-      end: '11:00'
-      subject: MARPII
-    - day: friday
-      start: '11:00'
-      end: '12:00'
-      subject: PC
+      - id: q1
+        display_name: Primer periodo
+        subtitle: Un horario ficticio para probar Schedule Viewer
+        assets:
+          week: assets/demo/q1/week-horizontal.webp
+          days:
+            monday: assets/demo/q1/day-monday-vertical.webp
+            tuesday: assets/demo/q1/day-tuesday-vertical.webp
+            wednesday: assets/demo/q1/day-wednesday-vertical.webp
+            thursday: assets/demo/q1/day-thursday-vertical.webp
+            friday: assets/demo/q1/day-friday-vertical.webp
+        subjects:
+          MAT:
+            name: Matemáticas
+            short: Matemáticas
+            group: A
+            room: Aula 1
+            fill: '#DDEEFF'
+            accent: '#2867A6'
+          DIS:
+            name: Diseño de Interfaces
+            short: Diseño
+            group: A
+            room: Aula 2
+            fill: '#DDF4F3'
+            accent: '#287C78'
+          SYS:
+            name: Sistemas
+            short: Sistemas
+            group: A
+            room: Aula 3
+            fill: '#DFF3E4'
+            accent: '#2F7A4E'
+          ALG:
+            name: Algoritmos
+            short: Algoritmos
+            group: A
+            room: Aula 4
+            fill: '#FFF1C9'
+            accent: '#9A6A00'
+        sessions:
+          - day: monday
+            start: '09:00'
+            end: '11:00'
+            subject: MAT
+          - day: monday
+            start: '12:00'
+            end: '14:00'
+            subject: DIS
+          - day: tuesday
+            start: '10:00'
+            end: '12:00'
+            subject: SYS
+          - day: wednesday
+            start: '09:00'
+            end: '11:00'
+            subject: ALG
+          - day: wednesday
+            start: '12:00'
+            end: '14:00'
+            subject: DIS
+          - day: thursday
+            start: '10:00'
+            end: '12:00'
+            subject: MAT
+          - day: friday
+            start: '11:00'
+            end: '13:00'
+            subject: SYS
+
+      - id: q2
+        display_name: Segundo periodo
+        subtitle: Datos completamente ficticios
+        assets:
+          week: assets/demo/q2/week-horizontal.webp
+          days:
+            monday: assets/demo/q2/day-monday-vertical.webp
+            tuesday: assets/demo/q2/day-tuesday-vertical.webp
+            wednesday: assets/demo/q2/day-wednesday-vertical.webp
+            thursday: assets/demo/q2/day-thursday-vertical.webp
+            friday: assets/demo/q2/day-friday-vertical.webp
+        subjects:
+          WEB:
+            name: Desarrollo Web
+            short: Web
+            group: B
+            room: Aula 5
+            fill: '#DDEEFF'
+            accent: '#2867A6'
+          AI:
+            name: Inteligencia Artificial
+            short: IA
+            group: B
+            room: Aula 6
+            fill: '#EEE6FA'
+            accent: '#6D4AA5'
+          DB:
+            name: Bases de Datos
+            short: Bases de Datos
+            group: B
+            room: Aula 7
+            fill: '#FFE5D4'
+            accent: '#A64B1D'
+        sessions:
+          - day: monday
+            start: '09:00'
+            end: '11:00'
+            subject: WEB
+          - day: tuesday
+            start: '11:00'
+            end: '13:00'
+            subject: AI
+          - day: wednesday
+            start: '09:00'
+            end: '11:00'
+            subject: DB
+          - day: thursday
+            start: '12:00'
+            end: '14:00'
+            subject: WEB
+          - day: friday
+            start: '10:00'
+            end: '12:00'
+            subject: AI
+
 rules:
-- priority: 400
-  when:
-    date_range:
-      start: '2027-01-18'
-      end: '2027-01-24'
-    view:
-    - phone_landscape
-    - wide_default
-  content:
-    type: term-schedule
-    academic_year: 2026-2027
-    term: q2
-    range: week
-- priority: 300
-  when:
-    calendar_status: vacation
-    view:
-    - phone_landscape
-    - wide_default
-  content:
-    type: image
-    src: assets/states/vacations-horizontal.webp
-    alt: Vacaciones
-    fit: contain
-- priority: 250
-  when:
-    calendar_status:
-    - holiday
-    - non-teaching
-    - inactive-weekday
-    view:
-    - phone_landscape
-    - wide_default
-  content:
-    type: current-term-schedule
-- priority: 200
-  when:
-    calendar_status: out-of-term
-    view:
-    - phone_landscape
-    - wide_default
-  content:
-    type: next-term-schedule
-- priority: 100
-  when:
-    calendar_status:
-    - holiday
-    - non-teaching
-    - inactive-weekday
-    - vacation
-    - out-of-term
-    view:
-    - phone_portrait
-    - desktop_portrait
-  content:
-    type: inactive-image
+  - priority: 300
+    when:
+      calendar_status: vacation
+      view:
+        - touch_landscape
+        - wide_default
+    content:
+      type: image
+      src: assets/states/vacations-horizontal.webp
+      alt: Vacaciones
+      fit: contain
+
+  - priority: 250
+    when:
+      calendar_status:
+        - holiday
+        - non-teaching
+        - inactive-weekday
+      view:
+        - touch_landscape
+        - wide_default
+    content:
+      type: current-term-schedule
+
+  - priority: 200
+    when:
+      calendar_status: out-of-term
+      view:
+        - touch_landscape
+        - wide_default
+    content:
+      type: next-term-schedule
+
+  - priority: 100
+    when:
+      calendar_status:
+        - holiday
+        - non-teaching
+        - inactive-weekday
+        - vacation
+        - out-of-term
+      view:
+        - touch_portrait
+        - desktop_portrait
+    content:
+      type: inactive-image

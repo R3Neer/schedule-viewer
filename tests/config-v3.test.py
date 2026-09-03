@@ -105,11 +105,12 @@ assert compiled["app"]["timezone"] == "Europe/Madrid"
 assert compiled["calendar"]["inactive"]["defaultImage"]["src"].endswith("no-class-today-vertical.webp")
 assert set(compiled["calendar"]["inactiveWeekdays"]) == {"saturday", "sunday"}
 assert compiled["desktop"]["defaultView"] == "wide_default"
-assert compiled["views"]["phone_portrait"]["range"] == {"type": "day"}
+assert compiled["views"]["touch_portrait"]["range"] == {"type": "day"}
+assert compiled["views"]["touch_landscape"]["range"]["type"] == "week"
 assert compiled["views"]["wide_default"]["range"]["type"] == "week"
 assert compiled["rules"][0]["priority"] > compiled["rules"][-1]["priority"]
-assert len(compiled["academicYears"][0]["terms"][0]["sessions"]) == 11
-assert len(compiled["academicYears"][0]["terms"][1]["sessions"]) == 14
+assert len(compiled["academicYears"][0]["terms"][0]["sessions"]) == 7
+assert len(compiled["academicYears"][0]["terms"][1]["sessions"]) == 5
 
 mapped = minimal()
 mapped["calendar"]["inactive_weekdays"] = {
@@ -179,4 +180,4 @@ priority_periods["academic_years"][0]["calendar"]["periods"] = [
 ]
 assert len(compile_config_data(priority_periods)["academicYears"][0]["calendar"]["periods"]) == 2
 
-print("config-v3: YAML real + 20 contratos positivos/negativos de compilación y validación OK")
+print("config-v3: YAML demo + 20 contratos positivos/negativos de compilación y validación OK")
