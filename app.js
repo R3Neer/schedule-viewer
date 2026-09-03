@@ -34,6 +34,9 @@ let manualViewId = null;
 let resizeTimer = null;
 let renderGeneration = 0;
 let settingsController = null;
+let pendingSpaceBeforeReady = false;
+let pendingSettingsShortcut = false;
+document.documentElement.dataset.appReady = "0";
 
 function getRequestedDate() {
   const override = new URLSearchParams(window.location.search).get("date");
@@ -153,6 +156,7 @@ async function render() {
 
 function showError(error) {
   console.error(error);
+  document.documentElement.dataset.appReady = "0";
   image.hidden = true;
   errorBox.hidden = false;
   errorBox.textContent = "No he podido cargar la vista. Revisa la configuración o vuelve a intentarlo.";
@@ -167,6 +171,12 @@ function isEditableOrInteractive(target) {
   ));
 }
 
+function isPlainSpace(event) {
+  return (event.code === "Space" || event.key === " ") &&
+    !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey &&
+    !event.defaultPrevented && !event.repeat;
+}
+
 function matchesToggleShortcut(event) {
   const shortcut = config.desktop?.shortcuts?.toggleView;
   if (shortcut?.enabled === false) return false;
@@ -177,8 +187,27 @@ function matchesToggleShortcut(event) {
   return event.code === configured || event.key === configured;
 }
 
+function toggleDesktopView() {
+  const shortcut = config.desktop?.shortcuts?.toggleView;
+  if (shortcut?.enabled === false || (shortcut?.key ?? "Space") !== "Space") return false;
+  const viewport = viewportContext();
+  const currentViewId = currentSelection?.viewId ?? config.desktop?.defaultView;
+  const target = desktopToggleTarget(config, currentViewId, viewport);
+  if (!target) return false;
+  manualViewId = target;
+  render().catch(showError);
+  return true;
+}
+
 function onKeyDown(event) {
-  if (!config || settingsController?.isOpen() || !matchesToggleShortcut(event) || isEditableOrInteractive(event.target)) return;
+  if (!config) {
+    if (isPlainSpace(event) && !isEditableOrInteractive(event.target)) {
+      event.preventDefault();
+      pendingSpaceBeforeReady = true;
+    }
+    return;
+  }
+  if (settingsController?.isOpen() || !matchesToggleShortcut(event) || isEditableOrInteractive(event.target)) return;
   const viewport = viewportContext();
   const currentViewId = currentSelection?.viewId ?? config.desktop?.defaultView;
   const target = desktopToggleTarget(config, currentViewId, viewport);
@@ -186,6 +215,22 @@ function onKeyDown(event) {
   event.preventDefault();
   manualViewId = target;
   render().catch(showError);
+}
+
+function matchesSettingsShortcut(event) {
+  return (event.key === "," || event.code === "Comma") &&
+    (event.ctrlKey || event.metaKey) &&
+    !event.altKey && !event.shiftKey;
+}
+
+function onSettingsShortcut(event) {
+  if (!matchesSettingsShortcut(event)) return;
+  event.preventDefault();
+  if (settingsController) {
+    settingsController.openSettings();
+    return;
+  }
+  pendingSettingsShortcut = true;
 }
 
 async function fetchDemoConfig() {
@@ -251,16 +296,27 @@ async function init() {
     });
 
     image.addEventListener("error", useFallback);
-    window.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", () => {
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(() => render().catch(showError), 100);
     });
 
     await render();
+    document.documentElement.dataset.appReady = "1";
+
+    if (pendingSettingsShortcut) {
+      pendingSettingsShortcut = false;
+      settingsController.openSettings();
+    }
+    if (pendingSpaceBeforeReady) {
+      pendingSpaceBeforeReady = false;
+      toggleDesktopView();
+    }
   } catch (error) {
     showError(error);
   }
 }
 
+document.addEventListener("keydown", onSettingsShortcut);
+window.addEventListener("keydown", onKeyDown);
 init();
