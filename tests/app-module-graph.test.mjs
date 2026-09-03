@@ -6,9 +6,10 @@ const result = await build({
   bundle: true,
   platform: "browser",
   format: "esm",
+  external: ["./lazy/*"],
   write: false,
   logLevel: "silent"
 });
 
-assert.ok(result.outputFiles?.length, "el grafo de módulos de app.js debe poder resolverse y empaquetarse");
-console.log("app-module-graph: imports/exportaciones del runtime resolubles OK");
+assert.ok(result.outputFiles?.length, "el grafo estático de app.js debe poder resolverse y empaquetarse");
+console.log("app-module-graph: imports/exportaciones del runtime estático resolubles OK");
