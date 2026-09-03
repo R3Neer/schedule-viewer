@@ -162,8 +162,11 @@ export async function cleanupLegacyMigrationCaches({ cacheStorage = globalThis.c
   if (!cacheStorage) return [];
   const names = await cacheStorage.keys();
   const candidates = names.filter((name) => name === V3_MIGRATION_CACHE_PREFIX || name.startsWith(`${V3_MIGRATION_CACHE_PREFIX}-`));
-  await Promise.all(candidates.map((name) => cacheStorage.delete(name)));
-  return candidates;
+  const deleted = [];
+  for (const name of candidates) {
+    if (await cacheStorage.delete(name)) deleted.push(name);
+  }
+  return deleted;
 }
 
 function hashText(value) {
@@ -185,6 +188,28 @@ function isLocalHttpSource(src, baseURI) {
   }
 }
 
+function legacyAssetId(absolute) {
+  return `legacy-${hashText(absolute)}`;
+}
+
+async function cachedAssetDescriptor(src, cache, baseURI, pendingAssets) {
+  if (!isLocalHttpSource(src, baseURI)) return null;
+  const absolute = new URL(src, baseURI).href;
+  const response = await cache.match(absolute, { ignoreSearch: true });
+  if (!response?.ok) return null;
+  const blob = await response.blob();
+  const id = legacyAssetId(absolute);
+  if (!pendingAssets.has(id)) {
+    pendingAssets.set(id, {
+      id,
+      blob,
+      mimeType: blob.type,
+      filename: decodeURIComponent(new URL(absolute).pathname.split("/").pop() || id)
+    });
+  }
+  return { type: "image", asset: id, fit: "contain" };
+}
+
 async function rewriteCachedImages(node, cache, baseURI, pendingAssets) {
   if (!node) return;
   if (Array.isArray(node)) {
@@ -193,24 +218,40 @@ async function rewriteCachedImages(node, cache, baseURI, pendingAssets) {
   }
   if (typeof node !== "object") return;
 
-  if (node.type === "image" && typeof node.src === "string" && isLocalHttpSource(node.src, baseURI)) {
-    const absolute = new URL(node.src, baseURI).href;
-    const response = await cache.match(absolute, { ignoreSearch: true });
-    if (response?.ok) {
-      const blob = await response.blob();
-      const id = `legacy-${hashText(absolute)}`;
-      pendingAssets.push({
-        id,
-        blob,
-        mimeType: blob.type,
-        filename: absolute.split("/").pop() || id
-      });
+  if (node.type === "image" && typeof node.src === "string") {
+    const descriptor = await cachedAssetDescriptor(node.src, cache, baseURI, pendingAssets);
+    if (descriptor) {
       delete node.src;
-      node.asset = id;
+      node.asset = descriptor.asset;
     }
   }
 
   for (const value of Object.values(node)) await rewriteCachedImages(value, cache, baseURI, pendingAssets);
+}
+
+async function preserveCachedTimetableAssets(config, cache, baseURI, pendingAssets) {
+  for (const year of config.academicYears ?? []) {
+    for (const term of year.terms ?? []) {
+      term.content = term.content ?? {};
+      if (!term.content.week && term.assets?.week) {
+        const descriptor = await cachedAssetDescriptor(term.assets.week, cache, baseURI, pendingAssets);
+        if (descriptor) {
+          descriptor.alt = `${term.displayName ?? term.id}, horario semanal`;
+          term.content.week = descriptor;
+        }
+      }
+
+      term.content.days = term.content.days ?? {};
+      for (const [weekday, src] of Object.entries(term.assets?.days ?? {})) {
+        if (term.content.days[weekday]) continue;
+        const descriptor = await cachedAssetDescriptor(src, cache, baseURI, pendingAssets);
+        if (descriptor) {
+          descriptor.alt = `${term.displayName ?? term.id}, horario del ${weekday}`;
+          term.content.days[weekday] = descriptor;
+        }
+      }
+    }
+  }
 }
 
 export async function migrateCachedV3Config({
@@ -241,14 +282,17 @@ export async function migrateCachedV3Config({
     if (config?.version !== 3 || config?.runtime?.demo) continue;
 
     const migrated = structuredClone(config);
-    const pendingAssets = [];
+    const pendingAssets = new Map();
     await rewriteCachedImages(migrated, cache, baseURI, pendingAssets);
-
-    for (const year of migrated.academicYears ?? []) {
-      for (const term of year.terms ?? []) term.assets = { week: null, days: {} };
-    }
+    await preserveCachedTimetableAssets(migrated, cache, baseURI, pendingAssets);
     migrated.runtime = { ...(migrated.runtime ?? {}), demo: false };
-    const record = await saveUserState({ config: migrated, yaml: null, assets: pendingAssets, source: "local" }, factory);
+
+    const record = await saveUserState({
+      config: migrated,
+      yaml: null,
+      assets: [...pendingAssets.values()],
+      source: "local"
+    }, factory);
     await cleanupLegacyMigrationCaches({ cacheStorage });
     return record;
   }
