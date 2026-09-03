@@ -9,6 +9,8 @@
   "devDependencies": {
     "@codemirror/lang-yaml": "^6.1.2",
     "@codemirror/lint": "^6.0.0",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.38.0",
     "@playwright/test": "1.55.0",
     "codemirror": "6.0.2",
     "esbuild": "^0.25.0",

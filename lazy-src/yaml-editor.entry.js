@@ -1,4 +1,6 @@
-import { basicSetup, EditorState, EditorView } from "codemirror";
+import { basicSetup } from "codemirror";
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { yaml as yamlLanguage } from "@codemirror/lang-yaml";
 import { linter, lintGutter } from "@codemirror/lint";
 import { parseDocument } from "yaml";

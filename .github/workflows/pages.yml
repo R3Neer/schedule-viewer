@@ -77,7 +77,7 @@ jobs:
           test ! -e dist/config/schedule.yaml
           test -f dist/lazy/config-io.js
           test -f dist/lazy/yaml-editor.js
-          grep -q 'codemirror' dist/lazy/yaml-editor.js
+          grep -q 'cm-editor' dist/lazy/yaml-editor.js
           ! grep -qi 'codemirror' dist/app.js
           ! grep -qi 'codemirror' dist/settings-ui.js
           ! grep -q 'lazy/yaml-editor.js' dist/service-worker.js
