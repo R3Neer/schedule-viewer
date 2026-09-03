@@ -1,11 +1,11 @@
 import {
-  collectAssetIds,
   desktopContextMatches,
   desktopToggleTarget,
   getDateInTimezone,
   resolveDefaultInactiveContent,
   selectScheduleContent
 } from "./schedule-core.js";
+import { collectAssetIds } from "./config-schema.js";
 import { renderSelectionContent } from "./runtime-renderer.js";
 import { MissingLocalAssetError, releaseResolvedSource, resolveRenderedSource } from "./asset-resolver.js";
 import {
