@@ -1,44 +1,53 @@
 # Schedule Viewer
 
-A lightweight, offline-first timetable viewer driven by a human-friendly YAML configuration.
+A lightweight, offline-first timetable viewer with a neutral demo and local, per-device customization.
 
-The runtime is generic. This repository currently contains Samuel's 2026–2027 Computer Science timetable at UCM, but the application itself is not tied to UCM, weekends, university terms, or a fixed daily/weekly layout.
+Schedule Viewer is not tied to a university, a fixed weekend, or a daily/weekly layout. The repository ships only generic demonstration data. Your real schedule and custom images stay in your browser unless you explicitly export them.
 
-## What changed in v3
+## How it works
 
-`config/schedule.yaml` is now the **only human-edited source of truth**.
+Open the app and use **Ajustes** to customize it. No account, backend or repository editing is required.
 
-The build validates and compiles it to:
+- On touch devices, configure the **Vertical** and **Horizontal** views.
+- On desktop, configure **Principal** and **Secundaria**. `Space` toggles between them by default.
+- Choose day, week, month, year, rolling, relative or absolute interval ranges.
+- Configure any recurring inactive weekdays, including none at all.
+- Replace the default inactive image or add images for specific dates, holidays and periods.
+- Use PNG, JPEG, GIF, WebP, SVG or AVIF images supported by the browser.
+
+The regular UI stores the normalized configuration and local image assets in **IndexedDB**. The static application remains deployable on GitHub Pages and works offline through its Service Worker.
+
+## Local data and backups
+
+Schedule Viewer is local-first:
 
 ```text
-dist/config/schedule.json
+static app + neutral demo
+          ↓
+      Ajustes UI
+          ↓
+IndexedDB configuration + Blob assets
+          ↓
+      rendered view
 ```
 
-The browser never parses YAML. This keeps the runtime small while making the configuration pleasant to edit.
+A complete **`.schedule`** backup contains both configuration and local assets. You can export it on one device and import it on another. There are also YAML-only import/export controls for advanced users.
 
-The v3 engine separates:
+The app never silently uploads your local schedule or images anywhere.
+
+## YAML
+
+The repository still uses a human-readable YAML source for the neutral demo:
 
 ```text
-date + viewport + manual interaction
-              ↓
-          view profile
-              ↓
-          time range
-              ↓
-        calendar state
-              ↓
-         content rule
-              ↓
-           renderer
+config/schedule.yaml
+        ↓ build
+ dist/config/schedule.json
 ```
 
-That means none of these are hardcoded anymore:
+The normal runtime does not load a YAML parser. The CodeMirror 6 + Lezer editor and YAML tooling are lazy-loaded only when **Avanzado → Editar YAML** is opened.
 
-- Saturday + Sunday as the weekend.
-- Portrait = day.
-- Landscape = week.
-- Desktop = week.
-- A single generic image for every inactive date.
+The same v3 schema supports configurable views, calendar policy, ranges and content rules. See [`docs/config-v3.md`](docs/config-v3.md) for the full configuration reference.
 
 ## Views and ranges
 
@@ -52,21 +61,21 @@ A view can use:
 - `rolling`
 - `interval`
 
-The current configuration preserves the original behavior:
+The neutral demo starts with behavior similar to a conventional timetable:
 
 ```text
-phone portrait    → current day
-phone landscape   → current week
-tablet / wide     → current week
-desktop default   → horizontal weekly view
-desktop Space     → toggle weekly ↔ daily
+touch portrait     → current day
+touch landscape    → current week
+desktop Principal  → current week
+desktop Secundaria → current day
+desktop Space      → toggle Principal ↔ Secundaria
 ```
 
-On desktop, `Space` only toggles views when focus is not inside an editable or interactive control.
+These are defaults, not hardcoded policy.
 
 ## Inactive days
 
-Recurring inactive weekdays are configurable:
+Recurring inactive weekdays are configurable. For example:
 
 ```yaml
 calendar:
@@ -90,42 +99,19 @@ calendar:
   inactive_weekdays: []
 ```
 
-Every inactive date is guaranteed to have an image because this is required:
+A required default inactive image guarantees that every inactive date remains renderable. More specific date, holiday, period or weekday images can override it.
 
-```yaml
-calendar:
-  inactive:
-    default_image:
-      src: assets/states/no-class-today-vertical.webp
-      alt: Sin clases hoy
-```
+## Migration from v3
 
-More specific images can override it for:
+When upgrading an existing v3 installation, v4 looks for the previous `schedule-viewer-offline-v3` cache before cleaning it up. If present, it migrates the cached configuration and referenced timetable images into IndexedDB atomically.
 
-1. an exact inactive date;
-2. a holiday;
-3. a vacation/non-teaching period;
-4. a recurring inactive weekday;
-5. otherwise the global default image.
-
-## Custom images
-
-Image descriptors work anywhere content can be configured:
-
-```yaml
-image:
-  src: assets/inactive/christmas.gif
-  alt: Navidad
-  fit: contain
-```
-
-GIF, PNG, JPEG, WebP, SVG and AVIF are handled by the browser through the same `<img>` renderer.
+The old cache is removed only after the local migration succeeds. This prevents an update from replacing an existing personalized timetable with the public demo merely because the storage model changed.
 
 ## Development
 
 ```bash
 python -m pip install -r requirements.txt
-npm install
+npm install --no-audit --no-fund
 
 python tools/validate_config.py
 python tests/config-v3.test.py
@@ -135,7 +121,7 @@ python tools/build.py --out dist
 npm run test:e2e
 ```
 
-To compile only the YAML:
+To compile only the demo YAML:
 
 ```bash
 python tools/compile_config.py --out test-output/schedule.json
@@ -147,26 +133,19 @@ To preview a specific date after building:
 http://localhost:4173/?date=2026-09-09
 ```
 
-## Tests
+## Tests and deployment
 
-CI blocks deployment unless all of these pass:
+CI blocks deployment unless the complete artifact passes validation, unit tests, build checks and Chromium E2E. The suite covers, among other things:
 
-- YAML v3 schema and negative validation tests;
-- calendar/range/view/rule unit contracts;
-- renderer contracts;
-- Service Worker cache discovery and migration contracts;
-- real Chromium E2E against the exact `dist/` artifact;
-- desktop keyboard toggling;
-- mobile orientation switching;
-- configurable inactive weekdays;
-- per-date/per-holiday/per-period image precedence;
-- month/relative/arbitrary interval views;
-- offline reload and offline desktop Space toggling.
+- YAML schema and negative validation contracts;
+- calendar, ranges, views and content rules;
+- the complete static ES-module graph;
+- IndexedDB configuration, Blob assets and atomic writes;
+- `.schedule` backup/restore;
+- lazy YAML editor boundaries;
+- touch/desktop UI behavior and keyboard accessibility;
+- real generated WebP assets;
+- offline reload and view toggling;
+- lossless v3 cache migration.
 
-## GitHub Pages
-
-`.github/workflows/pages.yml` builds `dist/`, opens it in Chromium, runs the full test suite, and only uploads the Pages artifact if everything is green.
-
-## Configuration reference
-
-See [`docs/config-v3.md`](docs/config-v3.md).
+`.github/workflows/pages.yml` uploads and deploys the Pages artifact only for a successful push to `main`. Branch pushes and pull requests run the same verification without publishing them.
