@@ -2,7 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [main, v3-config-engine]
+    branches: [main, v3-config-engine, local-config-ui]
   workflow_dispatch:
 
 permissions:
@@ -44,7 +44,7 @@ jobs:
           test ! -e config/schedules.json
           test -z "$(find config -maxdepth 1 -type f -name '*.json' -print -quit)"
 
-      - name: Validate and compile YAML v3
+      - name: Validate and compile YAML v3 demo
         run: |
           python tools/validate_config.py
           python tools/compile_config.py --out test-output/schedule.json
@@ -52,25 +52,36 @@ jobs:
           import json
           from pathlib import Path
           data = json.loads(Path("test-output/schedule.json").read_text(encoding="utf-8"))
+          source = Path("config/schedule.yaml").read_text(encoding="utf-8")
           assert data["version"] == 3
           assert data["calendar"]["inactive"]["defaultImage"]["src"]
           assert data["desktop"]["defaultView"] in data["views"]
-          print("compiled-config contract: OK")
+          assert "UCM" not in source
+          assert "Samuel" not in source
+          assert "Aula 9" not in source
+          print("compiled neutral demo contract: OK")
           PY
 
       - name: Test YAML compiler and negative validation contracts
         run: python tests/config-v3.test.py
 
-      - name: Test calendar, ranges, views, renderer and Service Worker contracts
+      - name: Test calendar, persistence, package, renderer and Service Worker contracts
         run: npm test
 
       - name: Build exact static artifact
         run: python tools/build.py --out dist
 
-      - name: Assert build artifact contains no YAML and valid runtime JSON
+      - name: Assert build artifact and lazy boundaries
         run: |
           test -f dist/config/schedule.json
           test ! -e dist/config/schedule.yaml
+          test -f dist/lazy/config-io.js
+          test -f dist/lazy/yaml-editor.js
+          grep -q 'codemirror' dist/lazy/yaml-editor.js
+          ! grep -qi 'codemirror' dist/app.js
+          ! grep -qi 'codemirror' dist/settings-ui.js
+          ! grep -q 'lazy/yaml-editor.js' dist/service-worker.js
+          ! grep -q 'lazy/config-io.js' dist/service-worker.js
           python - <<'PY'
           import json
           from pathlib import Path
@@ -78,7 +89,7 @@ jobs:
           assert config["version"] == 3
           assert len(config["views"]) >= 4
           assert config["calendar"]["inactive"]["defaultImage"]["type"] == "image"
-          print("dist/config/schedule.json: OK")
+          print("dist + lazy boundaries: OK")
           PY
 
       - name: Verify generated WebP assets are real visual renders, not blank placeholders
