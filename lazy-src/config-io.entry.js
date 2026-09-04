@@ -1,6 +1,6 @@
 import { parse, stringify } from "yaml";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
-import { collectAssetIds, compileSourceConfig, decompileConfig } from "../config-schema.js";
+import { assertSupportedUserAsset, collectAssetIds, compileSourceConfig, decompileConfig } from "../config-schema.js";
 
 const FORMAT = "schedule-viewer";
 const FORMAT_VERSION = 1;
@@ -24,7 +24,6 @@ function extensionFrom(record) {
     "image/png": ".png",
     "image/jpeg": ".jpg",
     "image/webp": ".webp",
-    "image/svg+xml": ".svg",
     "image/avif": ".avif"
   };
   return map[mime] ?? ".bin";
@@ -69,6 +68,7 @@ export async function exportSchedulePackage({ config, assets = [] }) {
   for (const id of required) {
     const record = byId.get(id);
     if (!record?.blob) throw new Error(`Falta el asset local requerido ${id}.`);
+    assertSupportedUserAsset(record, `assets.${id}`);
     if (record.blob.size > MAX_ASSET_BYTES) throw new Error(`El asset ${id} supera el límite de 25 MiB.`);
     const filename = `assets/${safeName(id)}${extensionFrom(record)}`;
     archive[filename] = new Uint8Array(await record.blob.arrayBuffer());
@@ -83,7 +83,7 @@ export async function exportSchedulePackage({ config, assets = [] }) {
   const manifest = {
     format: FORMAT,
     formatVersion: FORMAT_VERSION,
-    configVersion: 3,
+    configVersion: 4,
     createdAt: new Date().toISOString(),
     assets: manifestAssets
   };
@@ -116,7 +116,7 @@ export async function inspectSchedulePackage(input) {
   } catch {
     throw new Error("manifest.json no es JSON válido.");
   }
-  if (manifest?.format !== FORMAT || manifest?.formatVersion !== FORMAT_VERSION || manifest?.configVersion !== 3) {
+  if (manifest?.format !== FORMAT || manifest?.formatVersion !== FORMAT_VERSION || manifest?.configVersion !== 4) {
     throw new Error("Formato .schedule no compatible.");
   }
 
@@ -133,15 +133,30 @@ export async function inspectSchedulePackage(input) {
     const data = files[item.file];
     if (!data) throw new Error(`Falta ${item.file} en el paquete.`);
     if (data.byteLength > MAX_ASSET_BYTES) throw new Error(`El asset ${item.id} supera el límite de 25 MiB.`);
-    assets.push({
+    const record = {
       id: item.id,
       blob: new Blob([data], { type: item.mimeType || "application/octet-stream" }),
       mimeType: item.mimeType || "application/octet-stream",
       filename: item.filename || item.file.split("/").pop()
-    });
+    };
+    assertSupportedUserAsset(record, `manifest.assets.${item.id}`);
+    assets.push(record);
   }
   for (const id of required) if (!seen.has(id)) throw new Error(`El paquete no contiene el asset requerido ${id}.`);
   return { config, yaml: yamlText, manifest, assets };
+}
+
+export async function exportLegacyPackage({ record, assets = [] }) {
+  if (!record?.normalized || record.normalized.version !== 3) throw new Error("No hay una configuración v3 para recuperar.");
+  const archive = {
+    "legacy-config.json": strToU8(JSON.stringify(record.normalized, null, 2)),
+    "legacy-metadata.json": strToU8(JSON.stringify({ version: 3, yaml: record.yaml ?? null, exportedAt: new Date().toISOString() }, null, 2))
+  };
+  for (const asset of assets) {
+    if (!asset?.blob) continue;
+    archive[`assets/${safeName(asset.id)}${extensionFrom(asset)}`] = new Uint8Array(await asset.blob.arrayBuffer());
+  }
+  return new Blob([zipSync(archive, { level: 6 })], { type: "application/zip" });
 }
 
 export { MAX_ASSET_BYTES, MAX_PACKAGE_BYTES };

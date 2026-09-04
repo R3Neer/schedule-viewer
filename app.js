@@ -11,6 +11,7 @@ import { MissingLocalAssetError, releaseResolvedSource, resolveRenderedSource } 
 import {
   cleanupLegacyMigrationCaches,
   deleteUnreferencedAssets,
+  listAssets,
   loadUserConfig,
   migrateCachedV3Config,
   resetUserState,
@@ -18,7 +19,6 @@ import {
 } from "./local-store.js";
 import { applyUiEnvironment } from "./device-ui.js";
 import { initSettingsUI } from "./settings-ui.js";
-import { renameLegacyDemoLabels, renameLegacyDemoYaml } from "./demo-labels.js";
 import { initAppUpdates } from "./app-updates.js";
 
 const image = document.querySelector("#schedule-image");
@@ -29,6 +29,8 @@ let config = null;
 let demoConfig = null;
 let configSource = "demo";
 let configYaml = null;
+let legacyIssue = null;
+let legacyRecord = null;
 let currentKey = null;
 let currentRendered = null;
 let currentSelection = null;
@@ -68,7 +70,7 @@ function viewportContext() {
 
 function effectiveManualView(viewport) {
   if (!desktopContextMatches(config, viewport)) return null;
-  return manualViewId ?? config.desktop?.defaultView ?? null;
+  return manualViewId ?? "horizontal";
 }
 
 function useFallback() {
@@ -81,8 +83,7 @@ function useFallback() {
 }
 
 async function materializeSelection(selection, viewport) {
-  const view = config.views[selection.viewId];
-  const phoneArtwork = view?.renderer?.artwork === "phone";
+  const phoneArtwork = false;
   const rendered = renderSelectionContent(config, selection, {
     baseURI: document.baseURI,
     viewportWidth: viewport.width,
@@ -94,7 +95,7 @@ async function materializeSelection(selection, viewport) {
   } catch (error) {
     if (!(error instanceof MissingLocalAssetError) || !selection.evaluation?.inactive || selection.content?.source === "default") throw error;
     console.warn(`No existe ${error.assetId}; se usa la imagen inactiva por defecto.`);
-    const fallbackContent = resolveDefaultInactiveContent(config, selection.evaluation);
+    const fallbackContent = resolveDefaultInactiveContent(config, selection.evaluation, selection.viewId);
     const fallbackSelection = {
       ...selection,
       alt: fallbackContent.alt ?? selection.alt,
@@ -141,7 +142,7 @@ async function render() {
   document.documentElement.dataset.contentType = rendered.contentType;
   document.documentElement.dataset.manualView = manualViewId ? "1" : "0";
   document.documentElement.dataset.configSource = configSource;
-  document.title = `${config.app?.title ?? "Schedule Viewer"} · ${date}`;
+  document.title = `Schedule Viewer · ${date}`;
 
   image.alt = selection.alt;
   image.style.objectFit = rendered.fit;
@@ -181,9 +182,8 @@ function isPlainSpace(event) {
 }
 
 function matchesToggleShortcut(event) {
-  const shortcut = config.desktop?.shortcuts?.toggleView;
-  if (shortcut?.enabled === false) return false;
-  const configured = shortcut?.key ?? "Space";
+  if (config.presentation?.desktopToggle === false) return false;
+  const configured = "Space";
   if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return false;
   if (event.defaultPrevented || event.repeat) return false;
   if (configured === "Space") return event.code === "Space" || event.key === " ";
@@ -191,10 +191,9 @@ function matchesToggleShortcut(event) {
 }
 
 function toggleDesktopView() {
-  const shortcut = config.desktop?.shortcuts?.toggleView;
-  if (shortcut?.enabled === false || (shortcut?.key ?? "Space") !== "Space") return false;
+  if (config.presentation?.desktopToggle === false) return false;
   const viewport = viewportContext();
-  const currentViewId = currentSelection?.viewId ?? config.desktop?.defaultView;
+  const currentViewId = currentSelection?.viewId ?? "horizontal";
   const target = desktopToggleTarget(config, currentViewId, viewport);
   if (!target) return false;
   manualViewId = target;
@@ -212,7 +211,7 @@ function onKeyDown(event) {
   }
   if (settingsController?.isOpen() || !matchesToggleShortcut(event) || isEditableOrInteractive(event.target)) return;
   const viewport = viewportContext();
-  const currentViewId = currentSelection?.viewId ?? config.desktop?.defaultView;
+  const currentViewId = currentSelection?.viewId ?? "horizontal";
   const target = desktopToggleTarget(config, currentViewId, viewport);
   if (!target) return;
   event.preventDefault();
@@ -254,19 +253,11 @@ async function loadInitialConfig() {
   demoConfig = await fetchDemoConfig();
   if (local?.normalized) {
     config = local.normalized;
-    if (renameLegacyDemoLabels(config)) {
-      const record = await saveUserState({
-        config,
-        yaml: renameLegacyDemoYaml(local.yaml),
-        source: "local"
-      });
-      config = record.normalized;
-      configYaml = record.yaml;
-    } else {
-      configYaml = local.yaml ?? null;
-    }
+    configYaml = local.yaml ?? null;
     configSource = "local";
   } else {
+    legacyIssue = local?.legacyIncompatible ? local.error : null;
+    legacyRecord = local?.legacy ?? null;
     config = demoConfig;
     configSource = "demo";
     configYaml = null;
@@ -278,6 +269,8 @@ async function applyLocalConfig(nextConfig, { yaml = null, assets = [] } = {}) {
   config = record.normalized;
   configSource = "local";
   configYaml = record.yaml;
+  legacyIssue = null;
+  legacyRecord = null;
   manualViewId = null;
   currentKey = null;
   await deleteUnreferencedAssets(collectAssetIds(config));
@@ -291,6 +284,8 @@ async function restoreDemo() {
   config = structuredClone(demoConfig ?? await fetchDemoConfig());
   configSource = "demo";
   configYaml = null;
+  legacyIssue = null;
+  legacyRecord = null;
   manualViewId = null;
   currentKey = null;
   await cleanupLegacyMigrationCaches();
@@ -303,8 +298,12 @@ async function init() {
     await loadInitialConfig();
     settingsController = initSettingsUI({
       deviceMode: uiEnvironment.deviceMode,
-      getState: () => ({ config, source: configSource, yaml: configYaml }),
+      getState: () => ({ config, source: configSource, yaml: configYaml, legacyIssue }),
       applyLocalConfig,
+      exportLegacyConfig: legacyRecord ? async () => {
+        const io = await import("./lazy/config-io.js");
+        return io.exportLegacyPackage({ record: legacyRecord, assets: await listAssets() });
+      } : null,
       onUpdateSafetyChange: () => updatesController?.reconsider(),
       resetToDemo: restoreDemo
     });

@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
-from config_v3 import compile_yaml, dump_compiled_json
+from config_v4 import compile_yaml, dump_compiled_json
 from render_assets import render_all
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,14 +35,6 @@ def is_local_path(src: str) -> bool:
 
 def verify_assets(config: dict, out: Path) -> None:
     expected = set(iter_image_sources(config))
-    expected.update(path for path in config.get("states", {}).values() if isinstance(path, str) and path)
-    for year in config.get("academicYears", []):
-        for term in year.get("terms", []):
-            week = term.get("assets", {}).get("week")
-            if week:
-                expected.add(week)
-            expected.update(path for path in term.get("assets", {}).get("days", {}).values() if path)
-
     missing = sorted(
         src for src in expected
         if isinstance(src, str)
@@ -133,7 +125,6 @@ def main():
         "local-store.js",
         "asset-resolver.js",
         "device-ui.js",
-        "demo-labels.js",
         "config-schema.js",
         "settings-ui.js",
         "settings-motion.js",

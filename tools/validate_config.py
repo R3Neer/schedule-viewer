@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from config_v3 import ConfigError, compile_yaml
+from config_v4 import ConfigError, compile_yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config" / "schedule.yaml"
@@ -17,8 +17,8 @@ def main() -> None:
 
     print(
         "validate-config: OK "
-        f"(v{config['version']}, {len(config['views'])} vistas, "
-        f"{len(config['rules'])} reglas, {len(config['academicYears'])} curso)"
+        f"(v{config['version']}, {len(config['periods'])} periodos, "
+        f"{len(config['calendar']['exceptions'])} excepciones)"
     )
 
 

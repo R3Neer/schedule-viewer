@@ -1,6 +1,6 @@
-version: 3
+version: 4
+
 app:
-  title: Schedule Viewer
   timezone: Europe/Madrid
 
 defaults:
@@ -11,286 +11,79 @@ runtime:
   allow_date_override: true
   demo: true
 
-visual:
-  brand: Schedule Viewer
-  title: Horario
-  palette:
-    background: '#F4F7FB'
-    paper: '#FFFFFF'
-    ink: '#102A43'
-    muted: '#627D98'
-    line: '#D9E2EC'
-    navy: '#173F68'
-    navySoft: '#EAF2FA'
-
-states:
-  inactive_default: assets/states/no-class-today-vertical.webp
-  vacations: assets/states/vacations-horizontal.webp
+presentation:
+  vertical:
+    unit: day
+  desktop_toggle: true
 
 calendar:
-  inactive:
-    default_image:
-      src: assets/states/no-class-today-vertical.webp
-      alt: Sin actividades hoy
-      fit: contain
-  inactive_weekdays:
-    - saturday
-    - sunday
-  active_dates: []
-  inactive_dates: []
+  active_weekdays: [monday, tuesday, wednesday, thursday, friday]
+  exceptions:
+    - id: autumn-holiday
+      date: '2026-10-12'
+      name: Día festivo
+      state: inactive
+      kind: holiday
+    - id: maintenance-day
+      date: '2026-11-13'
+      name: Cierre por mantenimiento
+      state: inactive
+      kind: closure
+  inactive_periods:
+    - id: winter-break
+      name: Descanso de invierno
+      start: '2026-12-19'
+      end: '2027-01-10'
+      kind: vacation
+    - id: spring-break
+      name: Descanso de primavera
+      start: '2027-03-22'
+      end: '2027-03-28'
+      kind: vacation
 
-views:
-  touch_portrait:
-    priority: 200
-    when:
-      orientation: portrait
-      pointer: coarse
-    range: day
-    renderer:
-      type: timetable
-      artwork: phone
-
-  touch_landscape:
-    priority: 200
-    when:
-      orientation: landscape
-      pointer: coarse
-    range:
-      type: week
-      starts_on: monday
-    renderer:
-      type: timetable
-      artwork: phone
-
-  wide_default:
-    priority: 20
-    when:
-      min_width: 761
-      pointer: fine
-    range:
-      type: week
-      starts_on: monday
-    renderer:
-      type: timetable
-      artwork: asset
-
-  desktop_portrait:
-    manual_only: true
-    range: day
-    renderer:
-      type: timetable
-      artwork: asset
-
-desktop:
-  when:
-    min_width: 1000
-    pointer: fine
-  primary_view: wide_default
-  secondary_view: desktop_portrait
-  default_view: wide_default
-  shortcuts:
-    toggle_view:
-      key: Space
-
-academic_years:
-  - id: demo-2026-2027
-    display_name: Curso 2026–2027
-    calendar:
-      terms:
-        - term_id: q1
-          start: '2026-09-01'
-          end: '2026-12-18'
-        - term_id: q2
-          start: '2027-01-11'
-          end: '2027-05-14'
-      holidays:
-        - date: '2026-10-12'
-          label: Día festivo
-      inactive_dates:
-        - date: '2026-11-13'
-          label: Día no lectivo
-      periods:
-        - id: winter-break
-          type: vacation
-          label: Vacaciones de invierno
-          start: '2026-12-19'
-          end: '2027-01-10'
-        - id: spring-break
-          type: vacation
-          label: Descanso de primavera
-          start: '2027-03-22'
-          end: '2027-03-28'
-
-    terms:
-      - id: q1
-        display_name: Primer periodo
-        subtitle: Un horario ficticio para probar Schedule Viewer
-        assets:
-          week: assets/demo/q1/week-horizontal.webp
+periods:
+  - id: demo-autumn
+    name: Periodo de otoño
+    start: '2026-09-01'
+    end: '2026-12-18'
+    images:
+      active:
+        vertical:
+          default: assets/demo/autumn/day-monday-vertical.webp
           days:
-            monday: assets/demo/q1/day-monday-vertical.webp
-            tuesday: assets/demo/q1/day-tuesday-vertical.webp
-            wednesday: assets/demo/q1/day-wednesday-vertical.webp
-            thursday: assets/demo/q1/day-thursday-vertical.webp
-            friday: assets/demo/q1/day-friday-vertical.webp
-        subjects:
-          MAT:
-            name: Matemáticas
-            short: Matemáticas
-            group: A
-            room: Aula 1
-            fill: '#DDEEFF'
-            accent: '#2867A6'
-          DIS:
-            name: Diseño de Interfaces
-            short: Diseño
-            group: A
-            room: Aula 2
-            fill: '#DDF4F3'
-            accent: '#287C78'
-          SYS:
-            name: Sistemas
-            short: Sistemas
-            group: A
-            room: Aula 3
-            fill: '#DFF3E4'
-            accent: '#2F7A4E'
-          ALG:
-            name: Algoritmos
-            short: Algoritmos
-            group: A
-            room: Aula 4
-            fill: '#FFF1C9'
-            accent: '#9A6A00'
-        sessions:
-          - day: monday
-            start: '09:00'
-            end: '11:00'
-            subject: MAT
-          - day: monday
-            start: '12:00'
-            end: '14:00'
-            subject: DIS
-          - day: tuesday
-            start: '10:00'
-            end: '12:00'
-            subject: SYS
-          - day: wednesday
-            start: '09:00'
-            end: '11:00'
-            subject: ALG
-          - day: wednesday
-            start: '12:00'
-            end: '14:00'
-            subject: DIS
-          - day: thursday
-            start: '10:00'
-            end: '12:00'
-            subject: MAT
-          - day: friday
-            start: '11:00'
-            end: '13:00'
-            subject: SYS
+            monday: assets/demo/autumn/day-monday-vertical.webp
+            tuesday: assets/demo/autumn/day-tuesday-vertical.webp
+            wednesday: assets/demo/autumn/day-wednesday-vertical.webp
+            thursday: assets/demo/autumn/day-thursday-vertical.webp
+            friday: assets/demo/autumn/day-friday-vertical.webp
+        horizontal: assets/demo/autumn/horizontal.webp
+      inactive:
+        vertical:
+          src: assets/states/inactive-vertical.webp
+          alt: Sin actividades hoy
+        horizontal:
+          src: assets/states/inactive-horizontal.webp
+          alt: Periodo inactivo
 
-      - id: q2
-        display_name: Segundo periodo
-        subtitle: Datos completamente ficticios
-        assets:
-          week: assets/demo/q2/week-horizontal.webp
+  - id: demo-spring
+    name: Periodo de primavera
+    start: '2027-01-11'
+    end: '2027-05-14'
+    images:
+      active:
+        vertical:
+          default: assets/demo/spring/day-monday-vertical.webp
           days:
-            monday: assets/demo/q2/day-monday-vertical.webp
-            tuesday: assets/demo/q2/day-tuesday-vertical.webp
-            wednesday: assets/demo/q2/day-wednesday-vertical.webp
-            thursday: assets/demo/q2/day-thursday-vertical.webp
-            friday: assets/demo/q2/day-friday-vertical.webp
-        subjects:
-          WEB:
-            name: Desarrollo Web
-            short: Web
-            group: B
-            room: Aula 5
-            fill: '#DDEEFF'
-            accent: '#2867A6'
-          AI:
-            name: Inteligencia Artificial
-            short: IA
-            group: B
-            room: Aula 6
-            fill: '#EEE6FA'
-            accent: '#6D4AA5'
-          DB:
-            name: Bases de Datos
-            short: Bases de Datos
-            group: B
-            room: Aula 7
-            fill: '#FFE5D4'
-            accent: '#A64B1D'
-        sessions:
-          - day: monday
-            start: '09:00'
-            end: '11:00'
-            subject: WEB
-          - day: tuesday
-            start: '11:00'
-            end: '13:00'
-            subject: AI
-          - day: wednesday
-            start: '09:00'
-            end: '11:00'
-            subject: DB
-          - day: thursday
-            start: '12:00'
-            end: '14:00'
-            subject: WEB
-          - day: friday
-            start: '10:00'
-            end: '12:00'
-            subject: AI
-
-rules:
-  - priority: 300
-    when:
-      calendar_status: vacation
-      view:
-        - touch_landscape
-        - wide_default
-    content:
-      type: image
-      src: assets/states/vacations-horizontal.webp
-      alt: Vacaciones
-      fit: contain
-
-  - priority: 250
-    when:
-      calendar_status:
-        - holiday
-        - non-teaching
-        - inactive-weekday
-      view:
-        - touch_landscape
-        - wide_default
-    content:
-      type: current-term-schedule
-
-  - priority: 200
-    when:
-      calendar_status: out-of-term
-      view:
-        - touch_landscape
-        - wide_default
-    content:
-      type: next-term-schedule
-
-  - priority: 100
-    when:
-      calendar_status:
-        - holiday
-        - non-teaching
-        - inactive-weekday
-        - vacation
-        - out-of-term
-      view:
-        - touch_portrait
-        - desktop_portrait
-    content:
-      type: inactive-image
+            monday: assets/demo/spring/day-monday-vertical.webp
+            tuesday: assets/demo/spring/day-tuesday-vertical.webp
+            wednesday: assets/demo/spring/day-wednesday-vertical.webp
+            thursday: assets/demo/spring/day-thursday-vertical.webp
+            friday: assets/demo/spring/day-friday-vertical.webp
+        horizontal: assets/demo/spring/horizontal.webp
+      inactive:
+        vertical:
+          src: assets/states/inactive-vertical.webp
+          alt: Sin actividades hoy
+        horizontal:
+          src: assets/states/inactive-horizontal.webp
+          alt: Periodo inactivo

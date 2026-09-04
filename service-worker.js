@@ -2,7 +2,7 @@ const CACHE_PREFIX = "schedule-viewer-";
 const LEGACY_CACHE_PREFIXES = ["schedule-viewer-offline-v2"];
 const MIGRATION_CACHE_PREFIX = "schedule-viewer-offline-v3";
 const LEGACY_IMMEDIATE_UPDATE_CACHES = ["schedule-viewer-offline-20260903-v4-6"];
-const RELEASE_ID = "20260904-v4-18";
+const RELEASE_ID = "20260904-v5-0";
 // A separate cache per release prevents unchanged lazy URLs from retaining old code.
 const CACHE_NAME = `${CACHE_PREFIX}offline-${RELEASE_ID}`;
 const SCOPE = self.registration.scope;
@@ -32,7 +32,6 @@ const CORE_PATHS = [
   "./local-store.js",
   "./asset-resolver.js",
   "./device-ui.js",
-  "./demo-labels.js",
   "./config-schema.js",
   "./settings-ui.js",
   "./settings-motion.js",
@@ -67,16 +66,8 @@ function discoverImageDescriptors(paths, node) {
 
 function scheduleAssetPaths(config) {
   const paths = new Set();
-  for (const path of Object.values(config.states ?? {})) addLocalAsset(paths, path);
-  for (const year of config.academicYears ?? []) {
-    for (const term of year.terms ?? []) {
-      addLocalAsset(paths, term.assets?.week);
-      for (const path of Object.values(term.assets?.days ?? {})) addLocalAsset(paths, path);
-    }
-  }
   discoverImageDescriptors(paths, config.calendar);
-  discoverImageDescriptors(paths, config.rules);
-  discoverImageDescriptors(paths, config.academicYears);
+  discoverImageDescriptors(paths, config.periods);
   return [...paths];
 }
 

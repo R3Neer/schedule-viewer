@@ -1,3 +1,5 @@
+import { assertSupportedUserAsset, collectAssetIds, compileSourceConfig, migrateV3Config } from "./config-schema.js";
+
 const DB_NAME = "schedule-viewer-local";
 const DB_VERSION = 1;
 const CONFIG_STORE = "config";
@@ -44,12 +46,22 @@ async function withDb(factory, fn) {
 }
 
 export async function loadUserConfig(factory = globalThis.indexedDB) {
-  return withDb(factory, async (db) => {
+  const record = await withDb(factory, async (db) => {
     const tx = db.transaction(CONFIG_STORE, "readonly");
     const record = await requestAsPromise(tx.objectStore(CONFIG_STORE).get(ACTIVE_CONFIG_ID));
     await transactionDone(tx);
     return record ?? null;
   });
+  if (!record?.normalized || record.normalized.version === 4) return record;
+  if (record.normalized.version !== 3) return { id: ACTIVE_CONFIG_ID, normalized: null, legacyIncompatible: true, error: "La configuración local usa una versión desconocida.", legacy: record };
+  try {
+    const migrated = migrateV3Config(record.normalized);
+    const ids = new Set(collectAssetIds(migrated));
+    for (const asset of await listAssets(factory)) if (ids.has(asset.id)) assertSupportedUserAsset(asset, `assets.${asset.id}`);
+    return saveUserState({ config: migrated, yaml: null, source: "local" }, factory);
+  } catch (error) {
+    return { id: ACTIVE_CONFIG_ID, normalized: null, legacyIncompatible: true, error: error.message, legacy: record };
+  }
 }
 
 export async function hasUserConfig(factory = globalThis.indexedDB) {
@@ -77,6 +89,7 @@ export async function listAssets(factory = globalThis.indexedDB) {
 
 export async function putAsset(record, factory = globalThis.indexedDB) {
   if (!record?.id || !(record.blob instanceof Blob)) throw new TypeError("Asset inválido.");
+  assertSupportedUserAsset(record);
   const now = new Date().toISOString();
   const normalized = {
     id: record.id,
@@ -104,12 +117,21 @@ export async function deleteAsset(id, factory = globalThis.indexedDB) {
 
 export async function saveUserState({ config, yaml = null, assets = [], source = "local" }, factory = globalThis.indexedDB) {
   if (!config || typeof config !== "object") throw new TypeError("Falta configuración normalizada.");
+  const normalized = compileSourceConfig(config.defaults?.weekStartsOn ? {
+    version: 4,
+    app: config.app,
+    defaults: { week_starts_on: config.defaults.weekStartsOn, image_fit: config.defaults.imageFit },
+    runtime: { allow_date_override: config.runtime?.allowDateOverride, demo: config.runtime?.demo },
+    presentation: { vertical: config.presentation?.vertical, desktop_toggle: config.presentation?.desktopToggle },
+    calendar: { active_weekdays: config.calendar?.activeWeekdays, exceptions: config.calendar?.exceptions, inactive_periods: config.calendar?.inactivePeriods },
+    periods: config.periods
+  } : config);
   const now = new Date().toISOString();
   const record = {
     id: ACTIVE_CONFIG_ID,
-    normalized: structuredClone(config),
+    normalized: structuredClone(normalized),
     yaml: typeof yaml === "string" ? yaml : null,
-    version: 3,
+    version: 4,
     source,
     updatedAt: now
   };
@@ -122,6 +144,7 @@ export async function saveUserState({ config, yaml = null, assets = [], source =
         tx.abort();
         throw new TypeError(`Asset pendiente inválido: ${asset?.id ?? "(sin id)"}`);
       }
+      assertSupportedUserAsset(asset, `assets.${asset.id}`);
       assetStore.put({
         id: asset.id,
         blob: asset.blob,
@@ -287,8 +310,10 @@ export async function migrateCachedV3Config({
     await preserveCachedTimetableAssets(migrated, cache, baseURI, pendingAssets);
     migrated.runtime = { ...(migrated.runtime ?? {}), demo: false };
 
+    let compiled;
+    try { compiled = migrateV3Config(migrated); } catch { continue; }
     const record = await saveUserState({
-      config: migrated,
+      config: compiled,
       yaml: null,
       assets: [...pendingAssets.values()],
       source: "local"
