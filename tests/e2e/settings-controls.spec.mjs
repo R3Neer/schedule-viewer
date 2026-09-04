@@ -132,6 +132,7 @@ test.describe("touch floating settings control", () => {
     await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
     await page.locator("#settings-button").click();
     await page.getByRole("button", { name: "Images", exact: true }).click();
+    await page.locator('details[data-image-group="Active days"] > summary').click();
     const preview = page.locator('[data-image-key$="active:vertical:default"] .image-preview');
     await expect(preview).toHaveAttribute("src", /^blob:/);
     await expect.poll(() => preview.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);

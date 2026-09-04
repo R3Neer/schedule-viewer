@@ -703,6 +703,7 @@ button:disabled { opacity: .45; cursor: default; }
 .image-settings-section[open] { padding-bottom: 10px; }
 .image-settings-section[open] + .image-settings-section { margin-top: 8px; }
 .image-settings-section > .image-settings-group { margin-top: 8px; }
+.image-settings-direct { display: grid; gap: 10px; min-width: 0; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .image-settings-section > summary::after,
   .image-settings-group > summary::after { transition: none; }

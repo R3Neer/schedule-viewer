@@ -342,22 +342,34 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
       return details;
     };
     const appendRows = (host, groupName) => {
+      if (host.dataset.imageRowsReady === "1") return;
+      host.dataset.imageRowsReady = "1";
       for (const item of grouped.get(groupName) ?? []) host.append(renderImageRow(item));
     };
     const appendSubgroup = (host, groupName) => {
       if (!grouped.has(groupName)) return;
       const details = detailsFor(groupName, "image-settings-group");
-      appendRows(details, groupName);
+      const reveal = () => { if (details.open) appendRows(details, groupName); };
+      details.addEventListener("toggle", reveal);
+      reveal();
       host.append(details);
     };
 
     const active = detailsFor("Active days", "image-settings-section");
-    appendRows(active, "Active days");
+    const activeRows = el("div", { class: "image-settings-direct" });
+    active.append(activeRows);
+    const revealActive = () => { if (active.open) appendRows(activeRows, "Active days"); };
+    active.addEventListener("toggle", revealActive);
+    revealActive();
     appendSubgroup(active, `Portrait · ${UNIT_LABELS[workingConfig.presentation.vertical.unit]}`);
     imageHost.append(active);
 
     const inactive = detailsFor("Inactive days", "image-settings-section");
-    appendRows(inactive, "Inactive days");
+    const inactiveRows = el("div", { class: "image-settings-direct" });
+    inactive.append(inactiveRows);
+    const revealInactive = () => { if (inactive.open) appendRows(inactiveRows, "Inactive days"); };
+    inactive.addEventListener("toggle", revealInactive);
+    revealInactive();
     for (const groupName of ["Recurring inactive days", "Exceptions", "Inactive periods"]) appendSubgroup(inactive, groupName);
     imageHost.append(inactive);
   }

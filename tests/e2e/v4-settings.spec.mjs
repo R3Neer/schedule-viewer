@@ -108,14 +108,14 @@ test("Imágenes separa vertical dinámica, horizontal única e inactivos", async
   await expect(active).not.toHaveAttribute("open", "");
   await expect(inactive).not.toHaveAttribute("open", "");
   const fixedHorizontal = page.locator('[data-image-key$=":active:horizontal"]');
-  await expect(fixedHorizontal).toHaveCount(1);
-  await expect(fixedHorizontal).toBeHidden();
+  await expect(fixedHorizontal).toHaveCount(0);
   const [sectionSize, subgroupSize] = await Promise.all([
     active.locator(":scope > summary").evaluate(node => parseFloat(getComputedStyle(node).fontSize)),
     active.locator('details[data-image-group^="Portrait"] > summary').evaluate(node => parseFloat(getComputedStyle(node).fontSize))
   ]);
   expect(sectionSize).toBeGreaterThan(subgroupSize);
   await active.locator(":scope > summary").click();
+  await expect(fixedHorizontal).toHaveCount(1);
   await expect(fixedHorizontal).toBeVisible();
   const portrait = active.locator('details[data-image-group^="Portrait"]');
   await expect(portrait).not.toHaveAttribute("open", "");
