@@ -84,11 +84,12 @@ test.describe("touch floating settings control", () => {
     await ready(page);
     await page.evaluate(async () => {
       const config = await fetch("./config/schedule.json").then(response => response.json());
-      const blob = await fetch(config.periods[0].images.active.vertical.default.src).then(response => response.blob());
+      const response = await fetch(config.periods[0].images.active.vertical.default.src);
+      const file = new File([await response.arrayBuffer()], "preview.webp", { type: response.headers.get("content-type") || "image/webp" });
       const id = "preview-test-asset";
       config.periods[0].images.active.vertical.default = { type: "image", asset: id, alt: "Miniatura local", fit: "contain" };
       const { saveUserState } = await import("./local-store.js");
-      await saveUserState({ config, yaml: null, assets: [{ id, blob, mimeType: blob.type, filename: "preview.webp" }], source: "local" });
+      await saveUserState({ config, yaml: null, assets: [{ id, blob: file, mimeType: file.type, filename: file.name }], source: "local" });
     });
 
     await page.reload({ waitUntil: "domcontentloaded" });
