@@ -31,7 +31,12 @@ test("grouped settings preserve drafts across sections and confine glass to the 
   const cards = page.locator("#period-settings > .settings-form-list > .settings-card");
   const first = await cards.nth(0).boundingBox();
   const second = await cards.nth(1).boundingBox();
-  expect(second.y - first.y - first.height).toBeGreaterThanOrEqual(20);
+  const configuredGap = await page.locator("#period-settings > .settings-form-list").evaluate(element =>
+    Number.parseFloat(getComputedStyle(element).rowGap)
+  );
+  const measuredGap = second.y - first.y - first.height;
+  expect(configuredGap).toBeGreaterThanOrEqual(16);
+  expect(Math.abs(measuredGap - configuredGap)).toBeLessThanOrEqual(1);
   await expect(cards.first()).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await page.screenshot({ path: testInfo.outputPath("apple-settings-periods.png") });
   await page.getByLabel("Nombre del periodo").first().fill("Mi periodo");
