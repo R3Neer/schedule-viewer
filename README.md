@@ -20,7 +20,7 @@ Schedule Viewer turns your own images into a date-aware display. Define named pe
 - **Predictable presentation.** Portrait can vary by weekday, real week or calendar month. Landscape uses one stable image for each period.
 - **Useful exceptions.** A weekly active pattern combines with exact active/inactive dates and named inactive intervals such as holidays, closures or breaks.
 - **Private by design.** Configuration and original image bytes stay in IndexedDB on the device. There is no account, backend, telemetry or analytics.
-- **Offline and installable.** The app shell and saved content work offline and can be added to an iPhone or iPad Home Screen.
+- **Offline and installable.** The app shell and saved content work offline and can be installed on iOS, iPadOS and Android.
 - **Portable.** A `.schedule` backup moves the configuration and its images together; YAML import/export handles the configuration alone.
 - **Lossless image storage.** PNG, JPEG, WebP, AVIF and animated GIF retain their original bytes. User-provided SVG is deliberately rejected.
 - **Accessible controls.** Keyboard navigation, visible focus, safe touch gestures, high-contrast YAML editing and interruptible motion support Reduce Motion.
@@ -57,11 +57,20 @@ Every screenshot uses deterministic artwork generated inside this repository. It
 
 1. Open the [live app](https://r3neer.github.io/schedule-viewer/).
 2. Open the floating settings control.
-3. Add or edit **Periodos** and define the active pattern and exceptions under **Calendario**.
-4. Choose the portrait unit under **Presentación**, then assign images under **Imágenes**.
-5. Select **Guardar cambios** and export a `.schedule` backup before clearing browser data or moving devices.
+3. Add or edit **Periods** and define the active pattern and exceptions under **Calendar**.
+4. Choose the portrait unit under **Presentation**, then assign images under **Images**.
+5. Select **Save changes** and export a `.schedule` backup before clearing browser data or moving devices.
 
-The interface is currently in Spanish. On touch devices, portrait selects the Vertical presentation and landscape selects Horizontal automatically. On desktop, Horizontal is the default and Space can alternate presentations when enabled.
+The interface is in English. On touch devices, portrait and landscape select their matching presentations automatically. On desktop, Landscape is the default and Space can alternate presentations when enabled.
+
+Layout and materials adapt independently to the platform:
+
+| Platform | Layout | Materials |
+| --- | --- | --- |
+| iOS and iPadOS | Touch-first iOS layout | Apple |
+| Android | Touch-first iOS layout | Generic desktop |
+| macOS | Desktop layout | Apple |
+| Windows and Linux | Desktop layout | Generic desktop |
 
 ## How selection works
 
@@ -91,7 +100,7 @@ Read the complete [configuration v4 contract](docs/config-v4.md) and [local stor
 
 ## Browser support
 
-The release barrier exercises current Chromium and WebKit. The PWA is designed for modern Safari/iOS and Chromium-based desktop browsers. WebKit automation is a technical approximation; behavior on a physical iPhone is validated separately after deployment.
+The release barrier exercises current Chromium and WebKit. The PWA targets modern Safari on iOS/macOS and Chromium on Android, Windows and Linux. WebKit automation is a technical approximation; behavior on physical mobile devices is validated separately after deployment.
 
 ## Development
 
