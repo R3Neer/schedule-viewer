@@ -45,9 +45,9 @@ def main() -> None:
             glow = max(0.0, 1.0 - (((x - 1270) / 720) ** 2 + ((y - 80) / 620) ** 2))
             pixels[x, y] = tuple(min(255, round(channel + glow * 10)) for channel in color) + (255,)
 
-    desktop = Image.open(MEDIA / "desktop-week-light.png").convert("RGB")
+    desktop = Image.open(MEDIA / "desktop-horizontal-light.png").convert("RGB")
     desktop.thumbnail((1120, 700), Image.Resampling.LANCZOS)
-    phone = Image.open(MEDIA / "iphone-images-light.png").convert("RGB")
+    phone = Image.open(MEDIA / "iphone-settings-light.png").convert("RGB")
     phone.thumbnail((335, 730), Image.Resampling.LANCZOS)
 
     paste_card(canvas, desktop, (72, 112), 26, 34)

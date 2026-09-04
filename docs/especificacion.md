@@ -1,20 +1,19 @@
-# Especificación — Schedule Viewer v3
+# Especificación — Schedule Viewer v4
 
-Schedule Viewer is a declarative temporal-content viewer.
+Schedule Viewer es un visor declarativo de imágenes temporales.
 
-The source configuration is YAML. Runtime JSON is compiled during build.
+La fuente es YAML y el build produce JSON normalizado. El mismo contrato v4 se usa en el editor y las copias de seguridad.
 
-Core responsibilities are deliberately separated:
+Las responsabilidades se separan así:
 
 ```text
-view selection
-→ range resolution
-→ calendar evaluation
-→ rule selection
-→ content resolution
-→ rendering
+periodo vigente
+→ estado efectivo del calendario
+→ presentación vertical u horizontal
+→ unidad vertical o imagen horizontal fija
+→ resolución y renderizado del asset
 ```
 
-The runtime must not encode assumptions such as "weekend means Saturday/Sunday" or "landscape means week".
+El runtime no presupone que el fin de semana sea inactivo ni que una semana sea un horario. Retrato y paisaje eligen presentaciones; el calendario decide si la fecha está activa.
 
-See [`config-v3.md`](config-v3.md) for the normative configuration reference and [`qa.md`](qa.md) for acceptance coverage.
+La referencia normativa está en [`config-v4.md`](config-v4.md), la persistencia en [`local-config.md`](local-config.md) y la barrera de aceptación en [`qa.md`](qa.md).

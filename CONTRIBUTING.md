@@ -5,14 +5,14 @@ Thanks for improving Schedule Viewer. Keep changes local-first, static-hosting c
 ## Before opening a pull request
 
 1. Do not add personal schedules, institution-specific defaults or unlicensed images.
-2. Preserve the YAML v3 normalization boundary and IndexedDB asset model.
+2. Preserve the YAML v4 normalization boundary and IndexedDB asset model.
 3. Add or update focused contracts for behavior changes.
 4. Run the validation barrier:
 
 ```bash
 python tools/audit_public_tree.py
 python tools/validate_config.py
-python tests/config-v3.test.py
+python tests/config-v4.test.py
 npm test
 python tools/build.py --out dist
 npm run test:e2e
@@ -25,7 +25,7 @@ For visual changes, inspect phone portrait, phone landscape and desktop in both 
 
 - Do not commit `dist/`, test reports or browser traces.
 - Commit README screenshots only when the visible interface changes.
-- Keep showcase source provenance and hashes synchronized with the actual files.
+- Regenerate the deterministic public and visual-review captures after UI changes.
 - Run `python tools/render_app_icons.py` after changing the icon renderer.
 
 ## Scope

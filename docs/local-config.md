@@ -1,80 +1,44 @@
 # Local configuration and assets
 
-Schedule Viewer separates the published application from each user's personal state.
+Schedule Viewer separates the published application from personal state.
 
-## Storage model
+## Storage
 
 ```text
 Cache Storage
-→ public runtime, neutral demo and demo assets
+→ public runtime, neutral v4 demo and generated demo images
 
 IndexedDB: schedule-viewer-local
-├── config
-│   └── active
-└── assets
-    └── local image Blobs
+├── config / active
+├── config / incompatible-v3 (only when safe migration is impossible)
+└── assets / original local image Blobs
 ```
 
-The app loads the `active` IndexedDB configuration when it exists. Otherwise it uses the compiled public demo.
+The active IndexedDB configuration wins over the compiled demo. Updates replace the application shell, not personal records.
 
 ## Image descriptors
 
-Static/public image:
+Static source:
 
 ```yaml
-image:
-  src: assets/example.webp
-  alt: Example
-  fit: contain
+src: assets/example.webp
+alt: Example
+fit: contain
 ```
 
-Device-local image:
+Device-local source:
 
 ```yaml
-image:
-  asset: christmas
-  alt: Christmas
-  fit: contain
+asset: image-2c9100
+alt: Example
+fit: cover
 ```
 
-An `image` descriptor must define **exactly one** of `src` or `asset`.
-
-`asset` is a logical ID. At render time:
-
-```text
-asset id
-→ IndexedDB record
-→ Blob
-→ URL.createObjectURL()
-→ <img>
-```
-
-Object URLs are revoked when they are no longer needed.
-
-## Settings UX
-
-The same v3 model is edited by both the visual Settings UI and the advanced YAML editor.
-
-Touch devices show view controls as:
-
-```text
-Vertical
-Horizontal
-```
-
-Desktop shows:
-
-```text
-Primary
-Secondary
-Space to toggle
-```
-
-This is presentation only; the underlying model remains the normal v3 view-profile model.
+A descriptor defines exactly one of `src` or `asset`. Local identifiers resolve to IndexedDB Blobs and temporary object URLs, which are revoked after use. PNG, JPEG, WebP, AVIF and GIF bytes are never recoded; SVG is rejected.
 
 ## `.schedule` packages
 
-The normal backup format is one `.schedule` file, internally a ZIP:
+The portable package is a ZIP with:
 
 ```text
 schedule.yaml
@@ -82,51 +46,16 @@ manifest.json
 assets/
 ```
 
-The manifest currently uses format version 1 and config version 3.
+The manifest uses configuration version 4 and records each original filename, MIME type and asset identifier. Import verifies the schema, references, archive paths, supported MIME types and configured size limits before atomically replacing the active state.
 
-Import is validated before state replacement. Required referenced assets must be present and archive paths are checked against traversal/zip-slip patterns.
+YAML import/export intentionally carries configuration only. The settings UI says so next to the compact YAML actions.
 
-Current safety limits:
+## Lazy advanced tools
 
-- 25 MiB per asset;
-- 100 MiB per complete package.
+CodeMirror, the YAML parser and ZIP implementation are not part of initial rendering. They load only when the related editor/import/export action is opened. The lightweight offline bundle remains cached so settings and backup work without a network connection.
 
-## YAML editor
+## Safe v3 migration
 
-The browser's advanced editor uses CodeMirror 6, Lezer YAML and Schedule Viewer's browser-side schema compiler.
+Migration runs only for image-backed v3 terms. Each term becomes a named period, daily images become vertical day overrides, the weekly image becomes its fixed horizontal image, and compatible calendar dates/intervals are retained.
 
-The editor bundle is not part of normal startup and is imported only after opening:
-
-```text
-Settings → Advanced → Edit YAML
-```
-
-The lighter config/import-export bundle is precached so visual Settings and backup remain available offline.
-
-## Offline
-
-Once installed and configured, the following must work without network access:
-
-- schedule rendering;
-- orientation/view changes;
-- desktop Space toggle;
-- local image rendering;
-- Settings;
-- visual edits;
-- backup/import tools that only require local files.
-
-User Blobs remain in IndexedDB rather than being duplicated in Cache Storage.
-
-## v3 migration
-
-A legacy `schedule-viewer-offline-v3*` cache is intentionally preserved during the first v4 Service Worker activation.
-
-The new runtime then:
-
-1. reads the cached v3 `schedule.json`;
-2. copies referenced custom/static images to IndexedDB Blobs;
-3. copies cached weekly/daily timetable WebPs to IndexedDB and rewrites term content to local `asset` descriptors;
-4. atomically saves configuration + assets;
-5. only then deletes the legacy v3 cache.
-
-This ordering is deliberate. Deleting the old cache during Service Worker activation would destroy the only copy of the previous personal configuration before the new runtime could migrate it.
+If a used term lacks a required image, depends on structured schedule content or references SVG, migration stops. The old record is isolated, remains downloadable, and the UI offers v4 import or reset; it is never silently overwritten.
