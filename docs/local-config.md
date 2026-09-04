@@ -36,7 +36,7 @@ fit: cover
 
 A descriptor defines exactly one of `src` or `asset`. Local identifiers resolve to IndexedDB Blobs and temporary object URLs, which are revoked after use. PNG, JPEG, WebP, AVIF and GIF bytes are never recoded; SVG is rejected.
 
-For the complete YAML contract, including periods, calendar rules and image assignment, see [Configuration v4](config-v4.md).
+For the configuration v4 reference, including periods, calendar rules and image assignment, see [Configuration v4](config-v4.md).
 
 ## `.schedule` packages
 
@@ -96,7 +96,7 @@ periods:
 
 ### `manifest.json`
 
-The canonical manifest has this structure:
+For the YAML above, a matching canonical manifest is:
 
 ```json
 {
@@ -110,9 +110,39 @@ The canonical manifest has this structure:
       "file": "assets/autumn-vertical.webp",
       "mimeType": "image/webp",
       "filename": "autumn-vertical.webp"
+    },
+    {
+      "id": "autumn-horizontal",
+      "file": "assets/autumn-horizontal.webp",
+      "mimeType": "image/webp",
+      "filename": "autumn-horizontal.webp"
+    },
+    {
+      "id": "inactive-vertical",
+      "file": "assets/inactive-vertical.webp",
+      "mimeType": "image/webp",
+      "filename": "inactive-vertical.webp"
+    },
+    {
+      "id": "inactive-horizontal",
+      "file": "assets/inactive-horizontal.webp",
+      "mimeType": "image/webp",
+      "filename": "inactive-horizontal.webp"
     }
   ]
 }
+```
+
+The matching archive therefore contains:
+
+```text
+schedule.yaml
+manifest.json
+assets/
+├── autumn-vertical.webp
+├── autumn-horizontal.webp
+├── inactive-vertical.webp
+└── inactive-horizontal.webp
 ```
 
 Package compatibility is identified by these values:
