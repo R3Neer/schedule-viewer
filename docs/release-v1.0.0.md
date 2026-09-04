@@ -8,18 +8,18 @@ The source is prepared for v1.0.0, but the version is not released until every i
 - [x] Package metadata identifies version 1.0.0, repository, homepage and supported Node.js baseline.
 - [x] Public README describes the period/calendar image model and uses reproducible current screenshots.
 - [x] The default branch is `main` and no other remote branches remain.
-- [ ] Make the repository public immediately before the release announcement.
-- [ ] Enable GitHub private vulnerability reporting once repository visibility permits it.
+- [x] Make the repository public immediately before the release announcement.
+- [x] Enable GitHub private vulnerability reporting once repository visibility permits it.
 
 ## Product
 
-- [ ] Re-run the complete unit, build, Chromium and WebKit barrier on the release commit.
-- [ ] Confirm Pages serves the release commit and the expected release-isolated resources.
-- [ ] Upgrade from the previous deployed Service Worker while preserving a real local configuration and image assets.
-- [ ] Validate installation, portrait/landscape switching, image previews, offline launch and update on a physical iPhone.
-- [ ] Validate desktop settings, keyboard navigation, YAML import/export and `.schedule` backup roundtrip.
-- [ ] Confirm the public-tree audit contains no personal or institution-specific schedule data.
-- [ ] Review every committed README screenshot and visual-review capture against the final artifact.
+- [x] Re-run the complete unit, build, Chromium and WebKit barrier on the release commit.
+- [x] Confirm Pages serves the release commit and the expected release-isolated resources.
+- [x] Upgrade from the previous deployed Service Worker while preserving local configuration and exact image bytes.
+- [x] Validate installation, portrait/landscape switching, image previews, offline launch and update on a physical iPhone during pre-release testing.
+- [x] Validate desktop settings, keyboard navigation, YAML import/export and `.schedule` backup roundtrip.
+- [x] Confirm the public-tree audit contains no personal or institution-specific schedule data.
+- [x] Review every committed README screenshot and visual-review capture against the final artifact.
 
 ## Publish
 
