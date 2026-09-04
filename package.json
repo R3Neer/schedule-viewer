@@ -1,8 +1,21 @@
 {
   "name": "schedule-viewer",
+  "version": "1.0.0",
   "private": true,
+  "description": "Local-first, offline calendar image viewer driven by periods, calendar rules and screen orientation.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/R3Neer/schedule-viewer.git"
+  },
+  "homepage": "https://r3neer.github.io/schedule-viewer/",
+  "bugs": {
+    "url": "https://github.com/R3Neer/schedule-viewer/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node tests/app-module-graph.test.mjs && node tests/settings-motion.test.mjs && node tests/settings-gestures.test.mjs && node tests/schedule-core.test.mjs && node tests/content-renderer.test.mjs && node tests/runtime-renderer.test.mjs && node tests/service-worker.test.mjs && node tests/app-updates.test.mjs && node tests/config-schema.test.mjs && node tests/device-ui.test.mjs && node tests/local-store.test.mjs && node tests/config-io.test.mjs && node tests/image-settings.test.mjs",
     "test:e2e": "playwright test",
