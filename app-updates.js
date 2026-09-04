@@ -21,7 +21,7 @@ export function initAppUpdates({ isSafeToReload = () => false } = {}) {
     document.documentElement.dataset.appUpdate = value ? "pending" : "current";
     for (const notice of notices) {
       notice.hidden = !value;
-      notice.textContent = "Actualización disponible. Se aplicará al cerrar Ajustes en todas las pestañas; guarda antes tus cambios.";
+      notice.textContent = "Update available. It will be applied after Settings is closed in every tab; save your changes first.";
     }
   }
 

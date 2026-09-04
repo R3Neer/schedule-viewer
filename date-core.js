@@ -5,7 +5,7 @@ export function inRange(date, start, end) { return compareDate(date, start) >= 0
 
 export function parseIsoParts(date) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!match) throw new TypeError(`Fecha ISO inválida: ${date}`);
+  if (!match) throw new TypeError(`Invalid ISO date: ${date}`);
   return match.slice(1).map(Number);
 }
 
@@ -16,7 +16,7 @@ export function dateFromIso(date) {
     value.getUTCFullYear() !== year ||
     value.getUTCMonth() !== month - 1 ||
     value.getUTCDate() !== day
-  ) throw new TypeError(`Fecha ISO inválida: ${date}`);
+  ) throw new TypeError(`Invalid ISO date: ${date}`);
   return value;
 }
 

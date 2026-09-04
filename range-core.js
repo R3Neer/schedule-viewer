@@ -5,7 +5,7 @@ import {
 
 export function resolveRange(definition, anchor, defaults = {}) {
   const range = typeof definition === "string" ? { type: definition } : { ...definition };
-  if (!range?.type) throw new TypeError("La vista no define un rango.");
+  if (!range?.type) throw new TypeError("The view does not define a range.");
   const kind = range.type;
   let start = anchor;
   let end = anchor;
@@ -16,7 +16,7 @@ export function resolveRange(definition, anchor, defaults = {}) {
     const startsOn = range.startsOn ?? defaults.weekStartsOn ?? "monday";
     const current = dayIndex(dayKeyFromIso(anchor));
     const desired = dayIndex(startsOn);
-    if (desired < 0) throw new TypeError(`startsOn desconocido: ${startsOn}`);
+    if (desired < 0) throw new TypeError(`Unknown startsOn value: ${startsOn}`);
     start = addDays(anchor, -((current - desired + 7) % 7));
     end = addDays(start, 6);
   } else if (kind === "month") {
@@ -38,14 +38,14 @@ export function resolveRange(definition, anchor, defaults = {}) {
       end = addDays(anchor, after);
     } else {
       const days = range.days;
-      if (!Number.isInteger(days) || days < 1) throw new TypeError("rolling.days debe ser >= 1.");
+      if (!Number.isInteger(days) || days < 1) throw new TypeError("rolling.days must be >= 1.");
       const position = range.anchorPosition ?? "start";
       if (position === "start") end = addDays(anchor, days - 1);
       else if (position === "end") start = addDays(anchor, -(days - 1));
       else if (position === "center") {
         start = addDays(anchor, -Math.floor((days - 1) / 2));
         end = addDays(start, days - 1);
-      } else throw new TypeError(`anchorPosition desconocido: ${position}`);
+      } else throw new TypeError(`Unknown anchorPosition: ${position}`);
     }
   } else if (kind === "interval") {
     start = range.start;
@@ -54,7 +54,7 @@ export function resolveRange(definition, anchor, defaults = {}) {
     dateFromIso(end);
     if (compareDate(start, end) > 0) throw new TypeError("interval.start no puede ser posterior a end.");
   } else {
-    throw new TypeError(`Tipo de rango desconocido: ${kind}`);
+    throw new TypeError(`Unknown range type: ${kind}`);
   }
 
   return {

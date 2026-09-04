@@ -1,8 +1,8 @@
 {
   "name": "Schedule Viewer",
   "short_name": "Schedule",
-  "description": "A local-first, offline timetable viewer.",
-  "lang": "es",
+  "description": "A local-first, offline viewer for period- and calendar-aware images.",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

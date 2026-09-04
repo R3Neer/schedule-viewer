@@ -43,9 +43,18 @@ export function readDeviceCapabilities(win = window, nav = navigator) {
 
 export function applyUiEnvironment(doc = document, win = window, nav = navigator) {
   const capabilities = readDeviceCapabilities(win, nav);
-  const deviceMode = detectDeviceMode(capabilities);
-  const uiTheme = isApplePlatform(capabilities) ? "apple" : "generic";
+  const { deviceMode, uiTheme } = resolveUiEnvironment(capabilities);
   doc.documentElement.dataset.deviceMode = deviceMode;
   doc.documentElement.dataset.uiTheme = uiTheme;
   return { deviceMode, uiTheme, capabilities };
+}
+
+// Layout and materials are deliberately independent: Android shares the
+// touch-first iOS layout with generic materials, while macOS shares the
+// desktop layout with Apple materials.
+export function resolveUiEnvironment(capabilities = {}) {
+  return {
+    deviceMode: detectDeviceMode(capabilities),
+    uiTheme: isApplePlatform(capabilities) ? "apple" : "generic"
+  };
 }

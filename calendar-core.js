@@ -58,12 +58,12 @@ export function evaluateDate(config, date) {
     status = "out-of-period";
     inactive = true;
     reason = "out-of-period";
-    label = "Fuera de periodo";
+    label = "Outside any period";
   } else if (!recurrentActive) {
     status = "inactive-weekday";
     inactive = true;
     reason = `weekday:${weekday}`;
-    label = "Día inactivo";
+    label = "Inactive day";
   }
 
   return {

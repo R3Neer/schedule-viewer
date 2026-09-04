@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1";
+const ANDROID_UA = "Mozilla/5.0 (Linux; Android 16; Pixel 10 Pro) AppleWebKit/537.36 Chrome/140.0 Mobile Safari/537.36";
+const MAC_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_6) AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15";
 
 async function ready(page, date = "2026-09-10") {
   await page.goto(`/?date=${date}`, { waitUntil: "domcontentloaded" });
@@ -20,7 +22,7 @@ test("desktop hint dismisses outside, opens Settings itself and generic checks a
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
   await page.locator("#demo-hint").click();
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
-  await page.getByRole("button", { name: "Calendario", exact: true }).click();
+  await page.getByRole("button", { name: "Calendar", exact: true }).click();
 
   const checkbox = page.locator('.checkbox-row input[type="checkbox"]').first();
   await expect(checkbox).toHaveCSS("appearance", "none");
@@ -29,12 +31,46 @@ test("desktop hint dismisses outside, opens Settings itself and generic checks a
   await expect(checkbox).toBeChecked({ checked: false });
 
   await page.locator("#settings-back").click();
-  await page.getByRole("button", { name: "Presentación", exact: true }).click();
-  await expect(page.getByText("Alternar vistas con Espacio", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Retrato muestra la vista Vertical/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Presentation", exact: true }).click();
+  await expect(page.getByText("Switch views with Space", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Portrait shows the portrait view/)).toHaveCount(0);
   const toggle = page.locator('.switch-row input[type="checkbox"]');
   await expect(toggle).toHaveCSS("appearance", "none");
   expect((await toggle.boundingBox()).width).toBeGreaterThanOrEqual(48);
+});
+
+test.describe("independent platform layout and materials", () => {
+  test("Android uses the iOS touch layout with generic materials", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 402, height: 874 }, isMobile: true, hasTouch: true, userAgent: ANDROID_UA });
+    const page = await context.newPage();
+    await ready(page);
+    await expect(page.locator("html")).toHaveAttribute("data-device-mode", "touch");
+    await expect(page.locator("html")).toHaveAttribute("data-ui-theme", "generic");
+    await page.locator("#settings-button").click();
+    const geometry = await page.locator(".settings-sheet").evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return { bottom: rect.bottom, viewportHeight: innerHeight, radius: getComputedStyle(node).borderTopLeftRadius };
+    });
+    expect(Math.abs(geometry.bottom - geometry.viewportHeight)).toBeLessThanOrEqual(1);
+    expect(Number.parseFloat(geometry.radius)).toBeGreaterThan(0);
+    await context.close();
+  });
+
+  test("macOS uses the desktop layout with Apple materials", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, userAgent: MAC_UA });
+    const page = await context.newPage();
+    await ready(page);
+    await expect(page.locator("html")).toHaveAttribute("data-device-mode", "desktop");
+    await expect(page.locator("html")).toHaveAttribute("data-ui-theme", "apple");
+    await page.locator("#settings-button").click();
+    const geometry = await page.locator(".settings-sheet").evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, viewportHeight: innerHeight };
+    });
+    expect(geometry.top).toBeGreaterThan(0);
+    expect(geometry.bottom).toBeLessThan(geometry.viewportHeight);
+    await context.close();
+  });
 });
 
 test.describe("touch floating settings control", () => {
@@ -59,11 +95,11 @@ test.describe("touch floating settings control", () => {
   test("presentation explains the current touch context without desktop-only controls", async ({ page }) => {
     await ready(page);
     await page.locator("#settings-button").click();
-    await page.getByRole("button", { name: "Presentación", exact: true }).click();
+    await page.getByRole("button", { name: "Presentation", exact: true }).click();
 
-    await expect(page.getByText("Alternar vistas con Espacio", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("Retrato muestra la vista Vertical y paisaje, la Horizontal.", { exact: true })).toBeVisible();
-    await expect(page.getByText(/En pantallas táctiles/)).toHaveCount(0);
+    await expect(page.getByText("Switch views with Space", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Portrait shows the portrait view; landscape shows the landscape view.", { exact: true })).toBeVisible();
+    await expect(page.getByText(/On touch screens/)).toHaveCount(0);
   });
 
   test("rotation switches between vertical and horizontal content after the viewport settles", async ({ page }) => {
@@ -95,7 +131,7 @@ test.describe("touch floating settings control", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
     await page.locator("#settings-button").click();
-    await page.getByRole("button", { name: "Imágenes", exact: true }).click();
+    await page.getByRole("button", { name: "Images", exact: true }).click();
     const preview = page.locator('[data-image-key$="active:vertical:default"] .image-preview');
     await expect(preview).toHaveAttribute("src", /^blob:/);
     await expect.poll(() => preview.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
@@ -117,7 +153,7 @@ test.describe("touch floating settings control", () => {
     await expect(page.locator("#schedule-image")).toBeVisible();
     await expect.poll(() => page.locator("#schedule-image").evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
     await page.locator("#settings-button").click();
-    await page.getByRole("button", { name: "Periodos", exact: true }).click();
-    await expect(page.getByLabel("Nombre del periodo").first()).toHaveValue("Mi periodo conservado");
+    await page.getByRole("button", { name: "Periods", exact: true }).click();
+    await expect(page.getByLabel("Period name").first()).toHaveValue("Mi periodo conservado");
   });
 });

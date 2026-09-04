@@ -2,7 +2,7 @@ const CACHE_PREFIX = "schedule-viewer-";
 const LEGACY_CACHE_PREFIXES = ["schedule-viewer-offline-v2"];
 const MIGRATION_CACHE_PREFIX = "schedule-viewer-offline-v3";
 const LEGACY_IMMEDIATE_UPDATE_CACHES = ["schedule-viewer-offline-20260903-v4-6"];
-const RELEASE_ID = "20260904-v5-3";
+const RELEASE_ID = "20260904-v5-4";
 // A separate cache per release prevents unchanged lazy URLs from retaining old code.
 const CACHE_NAME = `${CACHE_PREFIX}offline-${RELEASE_ID}`;
 const SCOPE = self.registration.scope;
@@ -49,7 +49,7 @@ function addLocalAsset(paths, src) {
     const url = new URL(src, SCOPE);
     if (url.origin === self.location.origin) paths.add(url.href);
   } catch (error) {
-    console.warn("Ruta de asset inválida:", src, error);
+    console.warn("Invalid asset path:", src, error);
   }
 }
 
@@ -77,7 +77,7 @@ async function cacheOptionalAssets(cache, urls) {
       const response = await fetch(url, { cache: "reload" });
       if (response.ok) await cache.put(url, response.clone());
     } catch (error) {
-      console.warn("No se pudo precachear un asset opcional:", url, error);
+      console.warn("An optional asset could not be precached:", url, error);
     }
   }));
 }
@@ -174,7 +174,7 @@ async function networkFirstNavigation(request) {
     return (
       await cache.match(scoped("./index.html")) ||
       await cache.match(scoped("./")) ||
-      new Response("Schedule Viewer no está disponible sin conexión.", {
+      new Response("Schedule Viewer is not available offline.", {
         status: 503,
         headers: { "Content-Type": "text/plain; charset=utf-8" }
       })
@@ -191,7 +191,7 @@ async function cacheFirst(request) {
     if (response.ok) await cache.put(request, response.clone());
     return response;
   } catch {
-    return new Response("Recurso no disponible sin conexión.", {
+    return new Response("Resource not available offline.", {
       status: 503,
       headers: { "Content-Type": "text/plain; charset=utf-8" }
     });

@@ -36,7 +36,7 @@ test("updating an installed client replaces cached code and preserves v4 config 
     upgraded = true;
     await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration()).update(); });
     await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
-    await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-20260904-v5-3"))).toBe(true);
+    await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-20260904-v5-4"))).toBe(true);
     await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-v4-1"))).toBe(false);
     const audit = await page.evaluate(async () => {
       const { getAsset, loadUserConfig } = await import("./local-store.js");
@@ -46,7 +46,7 @@ test("updating an installed client replaces cached code and preserves v4 config 
     });
     expect(audit).toEqual({ bytes: "GIF89a-exact-local-bytes", mime: "image/gif", filename: "animated.gif", name: "Conservado tras actualizar", stale: false, editor: true });
     await page.locator("#settings-button").click();
-    await page.getByRole("button", { name: "Avanzado", exact: true }).click();
+    await page.getByRole("button", { name: "Advanced", exact: true }).click();
     await page.locator("#yaml-edit").click();
     await expect(page.locator(".cm-editor")).toBeVisible();
   } finally {

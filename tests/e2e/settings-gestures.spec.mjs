@@ -130,11 +130,11 @@ test("header swipe down cancels when short, closes when committed and respects d
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
   await expect(page.locator("#settings-dialog")).toBeVisible();
 
-  await page.getByLabel("Nombre del periodo").first().fill("Borrador táctil");
+  await page.getByLabel("Period name").first().fill("Touch draft");
   page.once("dialog", prompt => prompt.dismiss());
   await pointerSwipe(page, { target: "#settings-title", start, end: { x: start.x, y: start.y + 300 } });
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
-  await expect(page.getByLabel("Nombre del periodo").first()).toHaveValue("Borrador táctil");
+  await expect(page.getByLabel("Period name").first()).toHaveValue("Touch draft");
   await expect.poll(() => page.locator(".settings-sheet").evaluate(node => new DOMMatrix(getComputedStyle(node).transform).m42)).toBeCloseTo(0, 1);
 
   page.once("dialog", prompt => prompt.accept());

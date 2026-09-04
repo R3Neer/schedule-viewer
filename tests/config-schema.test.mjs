@@ -12,12 +12,12 @@ assert.deepEqual(compileSourceConfig(decompileConfig(compiled)), compiled);
 
 const overlapping = makeSourceConfig();
 overlapping.periods[1].start = "2026-12-20";
-assert.throws(() => compileSourceConfig(overlapping), error => error instanceof ConfigValidationError && error.path === "periods" && /solapan/.test(error.message));
+assert.throws(() => compileSourceConfig(overlapping), error => error instanceof ConfigValidationError && error.path === "periods" && /overlap/.test(error.message));
 
 const svg = makeSourceConfig();
 svg.periods[0].images.active.horizontal = { src: "assets/unsafe.svg" };
-assert.throws(() => compileSourceConfig(svg), /SVG no está permitido/);
-assert.throws(() => assertSupportedUserAsset({ mimeType: "image/svg+xml" }), /SVG no está permitido/);
+assert.throws(() => compileSourceConfig(svg), /SVG is not allowed/);
+assert.throws(() => assertSupportedUserAsset({ mimeType: "image/svg+xml" }), /SVG is not allowed/);
 for (const mimeType of ["image/png", "image/jpeg", "image/webp", "image/avif", "image/gif"]) {
   assert.doesNotThrow(() => assertSupportedUserAsset({ mimeType }));
 }
@@ -44,9 +44,9 @@ assert.equal(migrated.periods[0].name, "Periodo importado");
 assert.equal(migrated.periods[0].images.active.horizontal.src, "assets/legacy/week.webp");
 const structuredOnly = structuredClone(legacy);
 delete structuredOnly.academicYears[0].terms[0].assets.days.friday;
-assert.throws(() => migrateV3Config(structuredOnly), /horario estructurado/);
+assert.throws(() => migrateV3Config(structuredOnly), /structured schedule/);
 const legacySvg = structuredClone(legacy);
 legacySvg.academicYears[0].terms[0].assets.week = "assets/legacy/week.svg";
-assert.throws(() => migrateV3Config(legacySvg), /SVG no está permitido/);
+assert.throws(() => migrateV3Config(legacySvg), /SVG is not allowed/);
 
 console.log("config-schema: contrato v4, roundtrip, migración segura y formatos de imagen OK");

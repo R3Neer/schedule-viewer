@@ -138,7 +138,7 @@ test("navigation can reverse, preserves scroll and restores focus", async ({ pag
 
   await page.locator("#yaml-edit").click();
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-panel", "yaml");
-  await expect(page.locator("#settings-back-label")).toHaveText("Avanzado");
+  await expect(page.locator("#settings-back-label")).toHaveText("Advanced");
   await page.locator("#settings-back").click();
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-panel", "advanced");
   await expect(page.locator("#yaml-edit")).toBeFocused();

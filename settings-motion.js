@@ -1,4 +1,4 @@
-const TITLES = { home: "Ajustes", periods: "Periodos", calendar: "Calendario", presentation: "Presentación", images: "Imágenes", backup: "Copia de seguridad", advanced: "Avanzado", yaml: "Editor YAML" };
+const TITLES = { home: "Settings", periods: "Periods", calendar: "Calendar", presentation: "Presentation", images: "Images", backup: "Backup", advanced: "Advanced", yaml: "YAML Editor" };
 const DEPTH = { home: 0, periods: 1, calendar: 1, presentation: 1, images: 1, backup: 1, advanced: 1, yaml: 2 };
 const PARENTS = { periods: "home", calendar: "home", presentation: "home", images: "home", backup: "home", advanced: "home", yaml: "advanced" };
 
@@ -88,11 +88,11 @@ export function initSettingsMotion({ dialog, deviceMode = "desktop", onStateChan
       panel.removeAttribute("aria-hidden");
       for (const property of ["transform", "opacity", "box-shadow"]) panel.style.removeProperty(property);
     }
-    currentPanel = name; dialog.dataset.panel = name; title.textContent = TITLES[name] || "Ajustes";
+    currentPanel = name; dialog.dataset.panel = name; title.textContent = TITLES[name] || "Settings";
     back.hidden = name === "home"; back.style.removeProperty("opacity");
     const parent = PARENTS[name];
-    backLabel.textContent = parent ? TITLES[parent] : "Ajustes";
-    back.setAttribute("aria-label", `Volver a ${parent ? TITLES[parent] : "Ajustes"}`);
+    backLabel.textContent = parent ? TITLES[parent] : "Settings";
+    back.setAttribute("aria-label", `Back to ${parent ? TITLES[parent] : "Settings"}`);
     for (const property of ["opacity", "transform", "position", "left", "top", "width"]) title.style.removeProperty(property);
     stage.style.removeProperty("height"); stage.classList.remove("is-navigating");
     navigationEdge.style.removeProperty("transform"); navigationEdge.style.removeProperty("opacity");
@@ -113,15 +113,15 @@ export function initSettingsMotion({ dialog, deviceMode = "desktop", onStateChan
     const ghost = title.cloneNode(true);
     ghost.removeAttribute("id"); ghost.removeAttribute("tabindex"); ghost.setAttribute("aria-hidden", "true");
     ghost.className = "settings-title-ghost";
-    ghost.textContent = TITLES[from] || "Ajustes";
+    ghost.textContent = TITLES[from] || "Settings";
     Object.assign(ghost.style, {
       left: `${oldTitleRect.left - headerRect.left}px`, top: `${oldTitleRect.top - headerRect.top}px`, width: `${oldTitleRect.width}px`
     });
-    title.before(ghost); title.textContent = TITLES[to] || "Ajustes";
+    title.before(ghost); title.textContent = TITLES[to] || "Settings";
     back.hidden = to === "home";
     const parent = PARENTS[to];
-    backLabel.textContent = parent ? TITLES[parent] : "Ajustes";
-    back.setAttribute("aria-label", `Volver a ${parent ? TITLES[parent] : "Ajustes"}`);
+    backLabel.textContent = parent ? TITLES[parent] : "Settings";
+    back.setAttribute("aria-label", `Back to ${parent ? TITLES[parent] : "Settings"}`);
     const targetTitleRect = title.getBoundingClientRect();
     Object.assign(title.style, {
       position: "absolute", left: `${targetTitleRect.left - headerRect.left}px`, top: `${targetTitleRect.top - headerRect.top}px`, width: `${targetTitleRect.width}px`

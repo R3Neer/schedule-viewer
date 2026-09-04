@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { detectDeviceMode, isApplePlatform } from "../device-ui.js";
+import { detectDeviceMode, isApplePlatform, resolveUiEnvironment } from "../device-ui.js";
 
 assert.equal(detectDeviceMode({ maxTouchPoints: 5, pointerCoarse: true, pointerFine: false, hoverNone: true }), "touch", "iPhone debe ser touch");
 assert.equal(detectDeviceMode({ maxTouchPoints: 10, pointerCoarse: true, pointerFine: false, hoverNone: true }), "touch", "iPad grande debe seguir siendo touch");
@@ -17,4 +17,9 @@ assert.equal(isApplePlatform({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS 
 assert.equal(isApplePlatform({ userAgent: "Mozilla/5.0 (Linux; Android 16)", platform: "Linux armv8l", maxTouchPoints: 5 }), false);
 assert.equal(isApplePlatform({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", platform: "Win32", maxTouchPoints: 0 }), false);
 
-console.log("device-ui: touch/desktop y Apple/generic con fallback móvil explícito OK");
+assert.deepEqual(resolveUiEnvironment({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)", platform: "iPhone", maxTouchPoints: 5 }), { deviceMode: "touch", uiTheme: "apple" });
+assert.deepEqual(resolveUiEnvironment({ userAgent: "Mozilla/5.0 (Linux; Android 16; Pixel 10) Mobile", platform: "Linux armv8l", maxTouchPoints: 5 }), { deviceMode: "touch", uiTheme: "generic" });
+assert.deepEqual(resolveUiEnvironment({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", platform: "MacIntel", maxTouchPoints: 0, pointerFine: true }), { deviceMode: "desktop", uiTheme: "apple" });
+assert.deepEqual(resolveUiEnvironment({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", platform: "Win32", maxTouchPoints: 0, pointerFine: true }), { deviceMode: "desktop", uiTheme: "generic" });
+
+console.log("device-ui: independent touch/desktop layout and Apple/generic materials OK");

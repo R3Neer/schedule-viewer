@@ -18,7 +18,7 @@ test.describe("settings responsive geometry", () => {
 
   test("portrait keeps destructive action separated from its description", async ({ page }) => {
     await page.setViewportSize({ width: 402, height: 874 });
-    await openSettings(page, "Copia de seguridad");
+    await openSettings(page, "Backup");
     const paragraph = page.locator(".danger-card p");
     const button = page.locator("#backup-reset");
     const [p, b] = await Promise.all([paragraph.boundingBox(), button.boundingBox()]);
@@ -29,7 +29,7 @@ test.describe("settings responsive geometry", () => {
 
   test("calendar section headings have breathing room above and below", async ({ page }) => {
     await page.setViewportSize({ width: 402, height: 874 });
-    await openSettings(page, "Calendario");
+    await openSettings(page, "Calendar");
 
     const metrics = await page.locator("#calendar-settings").evaluate((host) => {
       const sections = [...host.querySelectorAll(":scope > .calendar-editor")];
@@ -51,7 +51,7 @@ test.describe("settings responsive geometry", () => {
 
   test("image settings never create or retain horizontal scrolling", async ({ page }) => {
     await page.setViewportSize({ width: 402, height: 874 });
-    await openSettings(page, "Imágenes");
+    await openSettings(page, "Images");
 
     const geometry = await page.locator(".settings-scroll").evaluate(async (scroll) => {
       scroll.scrollLeft = 120;
@@ -76,7 +76,7 @@ test.describe("settings responsive geometry", () => {
 
   test("landscape reserves useful content height and keeps close/footer inside the viewport", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 874, height: 402 });
-    await openSettings(page, "Imágenes");
+    await openSettings(page, "Images");
 
     const viewport = page.viewportSize();
     const close = await page.locator("#settings-close").boundingBox();

@@ -16,13 +16,13 @@ assert.ok(targets.some(item => item.key === "interval:winter:vertical"));
 const weekly = makeConfig();
 weekly.presentation.vertical.unit = "week";
 targets = imageTargets(weekly, "autumn");
-const weeks = targets.filter(item => item.group === "Vertical · Semana");
+const weeks = targets.filter(item => item.group === "Portrait · Week");
 assert.ok(weeks.length >= 15, "usa semanas reales del intervalo, incluidas las parciales");
-assert.match(weeks[0].label, /sept 2026/);
+assert.match(weeks[0].label, /Sep .*2026/);
 
 const monthly = makeConfig();
 monthly.presentation.vertical.unit = "month";
 targets = imageTargets(monthly, "autumn");
-assert.deepEqual(targets.filter(item => item.group === "Vertical · Mes").map(item => item.key.split(":").at(-1)), ["2026-09", "2026-10", "2026-11", "2026-12"]);
+assert.deepEqual(targets.filter(item => item.group === "Portrait · Month").map(item => item.key.split(":").at(-1)), ["2026-09", "2026-10", "2026-11", "2026-12"]);
 
 console.log("image-settings: destinos verticales efectivos, horizontal fijo e inactivos jerárquicos OK");

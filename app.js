@@ -132,7 +132,7 @@ async function materializeSelection(selection, viewport) {
     return { rendered: await resolveRenderedSource(rendered), phoneArtwork, selection };
   } catch (error) {
     if (!(error instanceof MissingLocalAssetError) || !selection.evaluation?.inactive || selection.content?.source === "default") throw error;
-    console.warn(`No existe ${error.assetId}; se usa la imagen inactiva por defecto.`);
+    console.warn(`${error.assetId} does not exist; using the default inactive image.`);
     const fallbackContent = resolveDefaultInactiveContent(config, selection.evaluation, selection.viewId);
     const fallbackSelection = {
       ...selection,
@@ -167,7 +167,7 @@ async function render() {
   } catch (error) {
     const fallback = configSource === "local" ? demoFallbackFor(date, viewport) : null;
     if (!fallback) throw error;
-    console.warn("La imagen local configurada ya no está disponible; se usa la demostración sin modificar los ajustes.", error);
+    console.warn("The configured local image is no longer available; using the demo without changing Settings.", error);
     result = { rendered: { ...fallback, cacheKey: `recovered:${fallback.cacheKey}` }, phoneArtwork: false, selection: selected, recovered: true };
     document.documentElement.dataset.imageRecovery = "demo";
   }
@@ -216,7 +216,7 @@ function showError(error) {
   document.documentElement.dataset.appReady = "0";
   image.hidden = true;
   errorBox.hidden = false;
-  errorBox.textContent = "No he podido cargar la vista. Revisa la configuración o vuelve a intentarlo.";
+  errorBox.textContent = "The view could not be loaded. Check the configuration or try again.";
 }
 
 function isEditableOrInteractive(target) {
@@ -290,7 +290,7 @@ function onSettingsShortcut(event) {
 
 async function fetchDemoConfig() {
   const response = await fetch("./config/schedule.json", { cache: "no-cache" });
-  if (!response.ok) throw new Error(`Error cargando configuración demo: ${response.status}`);
+  if (!response.ok) throw new Error(`Could not load the demo configuration: ${response.status}`);
   const loaded = await response.json();
   loaded.runtime = { ...(loaded.runtime ?? {}), demo: true };
   return loaded;

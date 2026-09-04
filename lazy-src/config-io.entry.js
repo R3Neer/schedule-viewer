@@ -46,7 +46,7 @@ export function compiledToYaml(config) {
 }
 
 export function yamlToCompiled(yamlText) {
-  if (typeof yamlText !== "string") throw new TypeError("El YAML debe ser texto.");
+  if (typeof yamlText !== "string") throw new TypeError("YAML must be text.");
   const raw = parse(yamlText, { prettyErrors: true, uniqueKeys: true });
   return compileSourceConfig(raw);
 }
@@ -69,7 +69,7 @@ export async function exportSchedulePackage({ config, assets = [] }) {
     const record = byId.get(id);
     if (!record?.blob) throw new Error(`Falta el asset local requerido ${id}.`);
     assertSupportedUserAsset(record, `assets.${id}`);
-    if (record.blob.size > MAX_ASSET_BYTES) throw new Error(`El asset ${id} supera el límite de 25 MiB.`);
+    if (record.blob.size > MAX_ASSET_BYTES) throw new Error(`Asset ${id} exceeds the 25 MiB limit.`);
     const filename = `assets/${safeName(id)}${extensionFrom(record)}`;
     archive[filename] = new Uint8Array(await record.blob.arrayBuffer());
     manifestAssets.push({
@@ -89,7 +89,7 @@ export async function exportSchedulePackage({ config, assets = [] }) {
   };
   archive["manifest.json"] = strToU8(JSON.stringify(manifest, null, 2));
   const compressed = zipSync(archive, { level: 6 });
-  if (compressed.byteLength > MAX_PACKAGE_BYTES) throw new Error("El paquete exportado supera el límite de 100 MiB.");
+  if (compressed.byteLength > MAX_PACKAGE_BYTES) throw new Error("The exported package exceeds the 100 MiB limit.");
   return new Blob([compressed], { type: "application/vnd.schedule-viewer+zip" });
 }
 
@@ -97,7 +97,7 @@ async function toBytes(input) {
   if (input instanceof Uint8Array) return input;
   if (input instanceof ArrayBuffer) return new Uint8Array(input);
   if (input instanceof Blob) {
-    if (input.size > MAX_PACKAGE_BYTES) throw new Error("El paquete supera el límite de 100 MiB.");
+    if (input.size > MAX_PACKAGE_BYTES) throw new Error("The package exceeds the 100 MiB limit.");
     return new Uint8Array(await input.arrayBuffer());
   }
   throw new TypeError("Paquete no soportado.");
@@ -105,16 +105,16 @@ async function toBytes(input) {
 
 export async function inspectSchedulePackage(input) {
   const bytes = await toBytes(input);
-  if (bytes.byteLength > MAX_PACKAGE_BYTES) throw new Error("El paquete supera el límite de 100 MiB.");
+  if (bytes.byteLength > MAX_PACKAGE_BYTES) throw new Error("The package exceeds the 100 MiB limit.");
   const files = unzipSync(bytes);
   for (const path of Object.keys(files)) validateArchivePath(path);
-  if (!files["manifest.json"] || !files["schedule.yaml"]) throw new Error("El paquete debe contener manifest.json y schedule.yaml.");
+  if (!files["manifest.json"] || !files["schedule.yaml"]) throw new Error("The package must contain manifest.json and schedule.yaml.");
 
   let manifest;
   try {
     manifest = JSON.parse(strFromU8(files["manifest.json"]));
   } catch {
-    throw new Error("manifest.json no es JSON válido.");
+    throw new Error("manifest.json is not valid JSON.");
   }
   if (manifest?.format !== FORMAT || manifest?.formatVersion !== FORMAT_VERSION || manifest?.configVersion !== 4) {
     throw new Error("Formato .schedule no compatible.");
@@ -126,13 +126,13 @@ export async function inspectSchedulePackage(input) {
   const assets = [];
   const seen = new Set();
   for (const item of manifest.assets ?? []) {
-    if (!item || typeof item.id !== "string" || typeof item.file !== "string") throw new Error("Entrada de asset inválida en manifest.json.");
+    if (!item || typeof item.id !== "string" || typeof item.file !== "string") throw new Error("Invalid asset entry in manifest.json.");
     validateArchivePath(item.file);
     if (seen.has(item.id)) throw new Error(`Asset duplicado en manifest: ${item.id}.`);
     seen.add(item.id);
     const data = files[item.file];
     if (!data) throw new Error(`Falta ${item.file} en el paquete.`);
-    if (data.byteLength > MAX_ASSET_BYTES) throw new Error(`El asset ${item.id} supera el límite de 25 MiB.`);
+    if (data.byteLength > MAX_ASSET_BYTES) throw new Error(`Asset ${item.id} exceeds the 25 MiB limit.`);
     const record = {
       id: item.id,
       blob: new Blob([data], { type: item.mimeType || "application/octet-stream" }),
@@ -147,7 +147,7 @@ export async function inspectSchedulePackage(input) {
 }
 
 export async function exportLegacyPackage({ record, assets = [] }) {
-  if (!record?.normalized || record.normalized.version !== 3) throw new Error("No hay una configuración v3 para recuperar.");
+  if (!record?.normalized || record.normalized.version !== 3) throw new Error("There is no v3 configuration to recover.");
   const archive = {
     "legacy-config.json": strToU8(JSON.stringify(record.normalized, null, 2)),
     "legacy-metadata.json": strToU8(JSON.stringify({ version: 3, yaml: record.yaml ?? null, exportedAt: new Date().toISOString() }, null, 2))

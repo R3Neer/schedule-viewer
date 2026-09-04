@@ -1,18 +1,18 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#F4F7FB">
   <meta name="color-scheme" content="light dark">
   <title>Schedule Viewer</title>
-  <meta name="description" content="A local-first, offline timetable viewer with flexible views and per-device customization.">
+  <meta name="description" content="A local-first, offline calendar image viewer driven by periods, date rules and screen orientation.">
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=20260904-v5-3">
-  <link rel="stylesheet" href="./settings-responsive.css?v=20260904-v5-3">
-  <link rel="stylesheet" href="./apple-liquid-glass.css?v=20260904-v5-3">
+  <link rel="stylesheet" href="./styles.css?v=20260904-v5-4">
+  <link rel="stylesheet" href="./settings-responsive.css?v=20260904-v5-4">
+  <link rel="stylesheet" href="./apple-liquid-glass.css?v=20260904-v5-4">
   <style>
     [hidden] { display: none !important; }
 
@@ -41,20 +41,20 @@
   <script type="importmap">
     {
       "imports": {
-        "./schedule-core.js": "./schedule-core.js?v=20260904-v5-3",
-        "./date-core.js": "./date-core.js?v=20260904-v5-3",
-        "./range-core.js": "./range-core.js?v=20260904-v5-3",
-        "./view-core.js": "./view-core.js?v=20260904-v5-3",
-        "./calendar-core.js": "./calendar-core.js?v=20260904-v5-3",
-        "./content-core.js": "./content-core.js?v=20260904-v5-3",
-        "./content-renderer.js": "./content-renderer.js?v=20260904-v5-3",
-        "./runtime-renderer.js": "./runtime-renderer.js?v=20260904-v5-3",
-        "./local-store.js": "./local-store.js?v=20260904-v5-3",
-        "./asset-resolver.js": "./asset-resolver.js?v=20260904-v5-3",
-        "./device-ui.js": "./device-ui.js?v=20260904-v5-3",
-        "./config-schema.js": "./config-schema.js?v=20260904-v5-3",
-        "./settings-ui.js": "./settings-ui.js?v=20260904-v5-3",
-        "./app-updates.js": "./app-updates.js?v=20260904-v5-3"
+        "./schedule-core.js": "./schedule-core.js?v=20260904-v5-4",
+        "./date-core.js": "./date-core.js?v=20260904-v5-4",
+        "./range-core.js": "./range-core.js?v=20260904-v5-4",
+        "./view-core.js": "./view-core.js?v=20260904-v5-4",
+        "./calendar-core.js": "./calendar-core.js?v=20260904-v5-4",
+        "./content-core.js": "./content-core.js?v=20260904-v5-4",
+        "./content-renderer.js": "./content-renderer.js?v=20260904-v5-4",
+        "./runtime-renderer.js": "./runtime-renderer.js?v=20260904-v5-4",
+        "./local-store.js": "./local-store.js?v=20260904-v5-4",
+        "./asset-resolver.js": "./asset-resolver.js?v=20260904-v5-4",
+        "./device-ui.js": "./device-ui.js?v=20260904-v5-4",
+        "./config-schema.js": "./config-schema.js?v=20260904-v5-4",
+        "./settings-ui.js": "./settings-ui.js?v=20260904-v5-4",
+        "./app-updates.js": "./app-updates.js?v=20260904-v5-4"
       }
     }
   </script>
@@ -66,39 +66,39 @@
     <p id="error-message" class="error-message" role="alert" hidden></p>
   </main>
 
-  <button id="settings-button" class="settings-fab" type="button" aria-label="Abrir Ajustes">
+  <button id="settings-button" class="settings-fab" type="button" aria-label="Open Settings">
     <svg class="settings-gear-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.73v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.73l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></svg>
   </button>
 
   <button id="demo-hint" class="demo-hint" type="button" hidden>
     <svg class="settings-gear-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.73v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.73l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></svg>
-    <span>Personaliza tus periodos desde Ajustes</span>
+    <span>Customize your periods in Settings</span>
   </button>
 
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
     <div class="settings-sheet">
       <header class="settings-header">
-        <button id="settings-back" class="settings-back" type="button" aria-label="Volver a Ajustes" hidden><span class="settings-back-chevron" aria-hidden="true">‹</span><span id="settings-back-label">Ajustes</span></button>
-        <h2 id="settings-title" tabindex="-1">Ajustes</h2>
-        <button id="settings-close" class="icon-button" type="button" aria-label="Cerrar Ajustes"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        <button id="settings-back" class="settings-back" type="button" aria-label="Back to Settings" hidden><span class="settings-back-chevron" aria-hidden="true">‹</span><span id="settings-back-label">Settings</span></button>
+        <h2 id="settings-title" tabindex="-1">Settings</h2>
+        <button id="settings-close" class="icon-button" type="button" aria-label="Close Settings"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
       </header>
 
       <div class="settings-scroll">
         <p class="app-update-notice" data-app-update-notice role="status" hidden></p>
         <section id="settings-home-panel" data-settings-panel="home" class="settings-panel">
           <div id="legacy-config-warning" class="settings-card compatibility-warning" role="alert" hidden></div>
-          <nav class="settings-menu" aria-label="Configuración">
-            <button type="button" data-settings-tab="periods" class="settings-menu-row" aria-label="Periodos"><span><strong>Periodos</strong><small>Intervalos y nombres</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
-            <button type="button" data-settings-tab="calendar" class="settings-menu-row" aria-label="Calendario"><span><strong>Calendario</strong><small>Días activos y excepciones</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
-            <button type="button" data-settings-tab="presentation" class="settings-menu-row" aria-label="Presentación"><span><strong>Presentación</strong><small>Vertical dinámica y horizontal fija</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
-            <button type="button" data-settings-tab="images" class="settings-menu-row" aria-label="Imágenes"><span><strong>Imágenes</strong><small>Contenido activo e inactivo</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
+          <nav class="settings-menu" aria-label="Configuration">
+            <button type="button" data-settings-tab="periods" class="settings-menu-row" aria-label="Periods"><span><strong>Periods</strong><small>Date ranges and names</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="calendar" class="settings-menu-row" aria-label="Calendar"><span><strong>Calendar</strong><small>Active days and exceptions</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="presentation" class="settings-menu-row" aria-label="Presentation"><span><strong>Presentation</strong><small>Dynamic portrait and fixed landscape</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="images" class="settings-menu-row" aria-label="Images"><span><strong>Images</strong><small>Active and inactive content</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
           </nav>
-          <nav class="settings-menu" aria-label="Datos">
-            <button type="button" data-settings-tab="backup" class="settings-menu-row" aria-label="Copia de seguridad"><span>Copia de seguridad</span><span class="settings-chevron" aria-hidden="true">›</span></button>
-            <button type="button" data-settings-tab="advanced" class="settings-menu-row" aria-label="Avanzado"><span>Avanzado</span><span class="settings-chevron" aria-hidden="true">›</span></button>
+          <nav class="settings-menu" aria-label="Data">
+            <button type="button" data-settings-tab="backup" class="settings-menu-row" aria-label="Backup"><span>Backup</span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="advanced" class="settings-menu-row" aria-label="Advanced"><span>Advanced</span><span class="settings-chevron" aria-hidden="true">›</span></button>
           </nav>
-          <p id="settings-source" class="settings-group-note">Configuración demo</p>
-          <p class="settings-group-note">Versión <span id="app-version">20260904-v5-3</span></p>
+          <p id="settings-source" class="settings-group-note">Demo configuration</p>
+          <p class="settings-group-note">Version <span id="app-version">20260904-v5-4</span></p>
         </section>
         <section id="settings-periods-panel" data-settings-panel="periods" class="settings-panel" hidden>
           <div id="period-settings"></div>
@@ -118,17 +118,17 @@
 
         <section id="settings-backup-panel" data-settings-panel="backup" class="settings-panel" hidden>
           <div class="settings-card">
-            <h3>Copia completa</h3>
-            <p>El archivo <code>.schedule</code> incluye el YAML y todas las imágenes guardadas en este dispositivo.</p>
-            <div class="backup-actions" role="group" aria-label="Acciones de copia de seguridad">
-              <button id="backup-import" type="button" class="backup-action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M4 14v6h16v-6"/></svg><span>Importar</span></button>
-              <button id="backup-export" type="button" class="backup-action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V3m-4 4 4-4 4 4M4 14v6h16v-6"/></svg><span>Exportar</span></button>
+            <h3>Complete backup</h3>
+            <p>The <code>.schedule</code> file includes the YAML and every image saved on this device.</p>
+            <div class="backup-actions" role="group" aria-label="Backup actions">
+              <button id="backup-import" type="button" class="backup-action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M4 14v6h16v-6"/></svg><span>Import</span></button>
+              <button id="backup-export" type="button" class="backup-action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V3m-4 4 4-4 4 4M4 14v6h16v-6"/></svg><span>Export</span></button>
             </div>
           </div>
           <div class="settings-card danger-card">
-            <h3>Restablecer</h3>
-            <p>Vuelve a la demostración y elimina la configuración y los assets locales.</p>
-            <button id="backup-reset" type="button" class="danger-button">Restablecer configuración demo</button>
+            <h3>Reset</h3>
+            <p>Return to the demo and remove the local configuration and assets.</p>
+            <button id="backup-reset" type="button" class="danger-button">Reset demo configuration</button>
           </div>
         </section>
 
@@ -136,15 +136,15 @@
           <div class="settings-card yaml-overview-card">
             <div class="yaml-overview-heading">
               <h3>YAML</h3>
-              <p>Configuración avanzada</p>
+              <p>Advanced configuration</p>
             </div>
-            <div class="yaml-command-bar" role="group" aria-label="Acciones de configuración YAML">
-              <button id="yaml-edit" type="button" class="secondary-button yaml-icon-button" aria-label="Editar YAML" title="Editar YAML"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m4 20 4.3-1 10.9-10.9a2.1 2.1 0 0 0-3-3L5.3 16 4 20Zm10.7-13.7 3 3"/></svg></button>
-              <button id="yaml-import" type="button" class="secondary-button yaml-icon-button" aria-label="Importar YAML" title="Importar YAML"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v11m-4-4 4 4 4-4M4 14v6h16v-6"/></svg></button>
-              <button id="yaml-export" type="button" class="secondary-button yaml-icon-button" aria-label="Exportar YAML" title="Exportar YAML"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 14V3m-4 4 4-4 4 4M4 14v6h16v-6"/></svg></button>
+            <div class="yaml-command-bar" role="group" aria-label="YAML configuration actions">
+              <button id="yaml-edit" type="button" class="secondary-button yaml-icon-button" aria-label="Edit YAML" title="Edit YAML"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m4 20 4.3-1 10.9-10.9a2.1 2.1 0 0 0-3-3L5.3 16 4 20Zm10.7-13.7 3 3"/></svg></button>
+              <button id="yaml-import" type="button" class="secondary-button yaml-icon-button" aria-label="Import YAML" title="Import YAML"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v11m-4-4 4 4 4-4M4 14v6h16v-6"/></svg></button>
+              <button id="yaml-export" type="button" class="secondary-button yaml-icon-button" aria-label="Export YAML" title="Export YAML"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 14V3m-4 4 4-4 4 4M4 14v6h16v-6"/></svg></button>
             </div>
           </div>
-          <p class="settings-group-note yaml-file-note">El YAML no incluye las imágenes. Para conservarlas, usa Copia de seguridad.</p>
+          <p class="settings-group-note yaml-file-note">YAML does not include images. Use Backup to keep them.</p>
           <p id="yaml-file-status" class="settings-status" aria-live="polite"></p>
         </section>
 
@@ -152,14 +152,14 @@
           <div id="yaml-editor-host" class="yaml-editor-host" hidden></div>
           <div class="yaml-editor-actions">
             <p id="yaml-status" class="settings-status" aria-live="polite"></p>
-            <button id="yaml-apply" type="button" class="primary-button" disabled>Aplicar</button>
+            <button id="yaml-apply" type="button" class="primary-button" disabled>Apply</button>
           </div>
         </section>
       </div>
 
       <footer class="settings-footer" hidden>
         <p id="settings-status" class="settings-status" role="status" aria-live="polite"></p>
-        <button id="settings-save" type="button" class="primary-button" disabled>Guardar cambios</button>
+        <button id="settings-save" type="button" class="primary-button" disabled>Save changes</button>
       </footer>
     </div>
   </dialog>
@@ -178,7 +178,7 @@
     })();
 
   </script>
-  <script type="module" src="./app.js?v=20260904-v5-3"></script>
-  <script type="module" src="./apple-glass.js?v=20260904-v5-3"></script>
+  <script type="module" src="./app.js?v=20260904-v5-4"></script>
+  <script type="module" src="./apple-glass.js?v=20260904-v5-4"></script>
 </body>
 </html>

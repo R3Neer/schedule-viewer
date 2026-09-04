@@ -23,7 +23,7 @@ function transactionDone(transaction) {
 }
 
 export function openScheduleDb(factory = globalThis.indexedDB) {
-  if (!factory) return Promise.reject(new Error("IndexedDB no está disponible en este navegador."));
+  if (!factory) return Promise.reject(new Error("IndexedDB is not available in this browser."));
   return new Promise((resolve, reject) => {
     const request = factory.open(DB_NAME, DB_VERSION);
     request.addEventListener("upgradeneeded", () => {
@@ -32,7 +32,7 @@ export function openScheduleDb(factory = globalThis.indexedDB) {
       if (!db.objectStoreNames.contains(ASSET_STORE)) db.createObjectStore(ASSET_STORE, { keyPath: "id" });
     });
     request.addEventListener("success", () => resolve(request.result), { once: true });
-    request.addEventListener("error", () => reject(request.error ?? new Error("No se pudo abrir IndexedDB.")), { once: true });
+    request.addEventListener("error", () => reject(request.error ?? new Error("IndexedDB could not be opened.")), { once: true });
   });
 }
 
@@ -53,7 +53,7 @@ export async function loadUserConfig(factory = globalThis.indexedDB) {
     return record ?? null;
   });
   if (!record?.normalized || record.normalized.version === 4) return record;
-  if (record.normalized.version !== 3) return { id: ACTIVE_CONFIG_ID, normalized: null, legacyIncompatible: true, error: "La configuración local usa una versión desconocida.", legacy: record };
+  if (record.normalized.version !== 3) return { id: ACTIVE_CONFIG_ID, normalized: null, legacyIncompatible: true, error: "The local configuration uses an unknown version.", legacy: record };
   try {
     const migrated = migrateV3Config(record.normalized);
     const ids = new Set(collectAssetIds(migrated));
@@ -76,7 +76,7 @@ function materializeStoredAsset(record) {
 }
 
 async function prepareAssetForStorage(record, now = new Date().toISOString()) {
-  if (!record?.id || !(record.blob instanceof Blob)) throw new TypeError(`Asset pendiente inválido: ${record?.id ?? "(sin id)"}`);
+  if (!record?.id || !(record.blob instanceof Blob)) throw new TypeError(`Invalid pending asset: ${record?.id ?? "(missing id)"}`);
   assertSupportedUserAsset(record, `assets.${record.id}`);
   return {
     id: record.id,
@@ -112,7 +112,7 @@ export async function listAssets(factory = globalThis.indexedDB) {
 }
 
 export async function putAsset(record, factory = globalThis.indexedDB) {
-  if (!record?.id || !(record.blob instanceof Blob)) throw new TypeError("Asset inválido.");
+  if (!record?.id || !(record.blob instanceof Blob)) throw new TypeError("Invalid asset.");
   const now = new Date().toISOString();
   const normalized = await prepareAssetForStorage(record, now);
   await withDb(factory, async (db) => {
@@ -132,7 +132,7 @@ export async function deleteAsset(id, factory = globalThis.indexedDB) {
 }
 
 export async function saveUserState({ config, yaml = null, assets = [], source = "local" }, factory = globalThis.indexedDB) {
-  if (!config || typeof config !== "object") throw new TypeError("Falta configuración normalizada.");
+  if (!config || typeof config !== "object") throw new TypeError("The normalized configuration is missing.");
   const normalized = compileSourceConfig(config.defaults?.weekStartsOn ? {
     version: 4,
     app: config.app,

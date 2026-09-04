@@ -22,7 +22,7 @@ function rangeForPath(document, path, textLength) {
     const node = document.getIn(pathSegments(path), true);
     if (node?.range?.length >= 2) return { from: node.range[0], to: Math.max(node.range[0] + 1, node.range[1]) };
   } catch {
-    // El path semántico puede apuntar a una clave ausente. En ese caso usamos el inicio.
+    // A semantic path can point to a missing key. In that case, use the start.
   }
   return { from: 0, to: Math.min(Math.max(1, textLength), 1) };
 }

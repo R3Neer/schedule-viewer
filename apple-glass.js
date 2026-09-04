@@ -79,7 +79,7 @@ export function initAppleGlass({ uiTheme, sourceElement }) {
       failed = true;
       clear();
       html.dataset.appleGlass = "fallback";
-      console.warn("Se mantiene el material CSS del control de Ajustes.", error);
+      console.warn("Keeping the CSS material for the Settings control.", error);
     } finally {
       pending = false;
     }

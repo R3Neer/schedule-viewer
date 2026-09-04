@@ -52,7 +52,7 @@ await deleteUnreferencedAssets(["default-local"]);
 assert.deepEqual((await listAssets()).map(item => item.id), ["default-local"]);
 
 const before = await loadUserConfig();
-await assert.rejects(saveUserState({ config, assets: [{ id: "broken", blob: "not-a-blob" }] }), /inválido/);
+await assert.rejects(saveUserState({ config, assets: [{ id: "broken", blob: "not-a-blob" }] }), /Invalid/);
 assert.deepEqual((await loadUserConfig()).normalized, before.normalized);
 assert.equal(await getAsset("broken"), null);
 await deleteAsset("default-local");

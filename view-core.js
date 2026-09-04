@@ -6,7 +6,7 @@ export function orientationFor(viewport) {
 export function selectViewProfile(config, { viewport, manualViewId = null } = {}) {
   if (!viewport || !Number.isFinite(viewport.width) || !Number.isFinite(viewport.height)) throw new TypeError("selectViewProfile requiere viewport width/height.");
   const id = manualViewId ?? (orientationFor(viewport) === "landscape" ? "horizontal" : "vertical");
-  if (!["vertical", "horizontal"].includes(id)) throw new Error(`Vista manual inexistente: ${id}`);
+  if (!["vertical", "horizontal"].includes(id)) throw new Error(`Unknown manual view: ${id}`);
   return { id, orientation: id === "horizontal" ? "landscape" : "portrait" };
 }
 

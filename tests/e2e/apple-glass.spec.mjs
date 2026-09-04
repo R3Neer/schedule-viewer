@@ -26,7 +26,7 @@ test("grouped settings preserve drafts across sections and confine glass to the 
   await expect(page.locator("#settings-button .apple-glass-underlay")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("apple-settings-home.png") });
 
-  await page.getByRole("button", { name: "Periodos", exact: true }).click();
+  await page.getByRole("button", { name: "Periods", exact: true }).click();
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
   const cards = page.locator("#period-settings > .settings-form-list > .settings-card");
   const first = await cards.nth(0).boundingBox();
@@ -39,17 +39,17 @@ test("grouped settings preserve drafts across sections and confine glass to the 
   expect(Math.abs(measuredGap - configuredGap)).toBeLessThanOrEqual(1);
   await expect(cards.first()).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await page.screenshot({ path: testInfo.outputPath("apple-settings-periods.png") });
-  await page.getByLabel("Nombre del periodo").first().fill("Mi periodo");
+  await page.getByLabel("Period name").first().fill("My period");
   await page.locator("#settings-back").click();
-  await page.getByRole("button", { name: "Imágenes", exact: true }).click();
+  await page.getByRole("button", { name: "Images", exact: true }).click();
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
   await page.locator("#settings-back").click();
-  await page.getByRole("button", { name: "Periodos", exact: true }).click();
+  await page.getByRole("button", { name: "Periods", exact: true }).click();
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
-  await expect(page.getByLabel("Nombre del periodo").first()).toHaveValue("Mi periodo");
+  await expect(page.getByLabel("Period name").first()).toHaveValue("My period");
   await expect(page.locator("#settings-save")).toBeVisible();
   await page.locator("#settings-save").click();
-  await expect(page.locator("#settings-status")).toContainText("Guardado");
+  await expect(page.locator("#settings-status")).toContainText("Saved");
   await expect(page.locator("#settings-save")).toBeHidden();
 });
 
@@ -62,9 +62,9 @@ test("settings remain styled and usable when the optical renderer cannot load", 
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
   await expect(page.locator("#settings-home-panel")).toBeVisible();
   await expect(page.locator(".settings-sheet")).toHaveCSS("background-color", "rgb(242, 241, 246)");
-  await page.getByRole("button", { name: "Periodos", exact: true }).click();
+  await page.getByRole("button", { name: "Periods", exact: true }).click();
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
-  await expect(page.getByLabel("Nombre del periodo").first()).toBeVisible();
+  await expect(page.getByLabel("Period name").first()).toBeVisible();
 });
 
 test("a pending optical renderer never mounts while Settings is opening", async ({ page }) => {

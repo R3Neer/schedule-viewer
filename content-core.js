@@ -11,7 +11,7 @@ function orientationImage(images, orientation) {
 export function resolveDefaultInactiveContent(config, evaluation = {}, orientation = "vertical") {
   const period = evaluation.displayPeriod ?? displayPeriodForDate(config, evaluation.date);
   const image = period?.images?.inactive?.[orientation];
-  if (!image) throw new Error(`Falta la imagen inactiva ${orientation}.`);
+  if (!image) throw new Error(`The ${orientation} inactive image is missing.`);
   return { ...normalizeImageDescriptor(image), source: "default" };
 }
 
@@ -44,7 +44,7 @@ export function selectScheduleContent(config, { date, viewport = { width: 1024, 
   const orientation = view.id === "horizontal" ? "horizontal" : "vertical";
   const evaluation = evaluateDate(config, date);
   const period = evaluation.activePeriod ?? evaluation.displayPeriod;
-  if (!period) throw new Error("No hay ningún periodo configurado.");
+  if (!period) throw new Error("No period is configured.");
   const range = orientation === "horizontal"
     ? { type: "period", anchor: date, start: period.start, end: period.end }
     : resolveRange(config.presentation.vertical.unit, date, config.defaults);

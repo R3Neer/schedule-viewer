@@ -12,7 +12,7 @@ assert.deepEqual(rendered, {
   fit: "cover",
   cacheKey: "image:https://example.test/schedule-viewer/assets/demo/picture.webp"
 });
-assert.throws(() => renderSelectionContent(makeConfig(), { content: { type: "image", asset: "local" } }, { baseURI: "https://example.test/" }), /renderizable/);
-assert.throws(() => renderSelectionContent(makeConfig(), { content: { type: "term-schedule" } }, { baseURI: "https://example.test/" }), /renderizable/);
+assert.throws(() => renderSelectionContent(makeConfig(), { content: { type: "image", asset: "local" } }, { baseURI: "https://example.test/" }), /renderable/);
+assert.throws(() => renderSelectionContent(makeConfig(), { content: { type: "term-schedule" } }, { baseURI: "https://example.test/" }), /renderable/);
 
 console.log("content-renderer: runtime exclusivamente basado en imágenes OK");

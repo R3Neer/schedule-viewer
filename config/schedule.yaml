@@ -21,29 +21,29 @@ calendar:
   exceptions:
     - id: autumn-holiday
       date: '2026-10-12'
-      name: Día festivo
+      name: Public holiday
       state: inactive
       kind: holiday
     - id: maintenance-day
       date: '2026-11-13'
-      name: Cierre por mantenimiento
+      name: Maintenance closure
       state: inactive
       kind: closure
   inactive_periods:
     - id: winter-break
-      name: Descanso de invierno
+      name: Winter break
       start: '2026-12-19'
       end: '2027-01-10'
       kind: vacation
     - id: spring-break
-      name: Descanso de primavera
+      name: Spring break
       start: '2027-03-22'
       end: '2027-03-28'
       kind: vacation
 
 periods:
   - id: demo-autumn
-    name: Periodo de otoño
+    name: Autumn period
     start: '2026-09-01'
     end: '2026-12-18'
     images:
@@ -60,13 +60,13 @@ periods:
       inactive:
         vertical:
           src: assets/states/inactive-vertical.webp
-          alt: Sin actividades hoy
+          alt: No activities today
         horizontal:
           src: assets/states/inactive-horizontal.webp
-          alt: Periodo inactivo
+          alt: Inactive period
 
   - id: demo-spring
-    name: Periodo de primavera
+    name: Spring period
     start: '2027-01-11'
     end: '2027-05-14'
     images:
@@ -83,7 +83,7 @@ periods:
       inactive:
         vertical:
           src: assets/states/inactive-vertical.webp
-          alt: Sin actividades hoy
+          alt: No activities today
         horizontal:
           src: assets/states/inactive-horizontal.webp
-          alt: Periodo inactivo
+          alt: Inactive period

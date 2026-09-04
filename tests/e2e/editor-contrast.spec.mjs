@@ -11,7 +11,7 @@ function contrastSuite(colorScheme) {
       await page.goto("/?date=2026-09-09", { waitUntil: "domcontentloaded" });
       await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
       await page.locator("#settings-button").click();
-      await page.getByRole("button", { name: "Avanzado", exact: true }).click();
+      await page.getByRole("button", { name: "Advanced", exact: true }).click();
       await page.locator("#yaml-edit").click();
       await expect(page.locator(".cm-editor")).toBeVisible();
       const content = page.locator(".cm-content");
