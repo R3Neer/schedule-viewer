@@ -35,8 +35,9 @@ let currentKey = null;
 let currentRendered = null;
 let currentSelection = null;
 let manualViewId = null;
-let resizeTimer = null;
+const viewportRenderTimers = new Set();
 let renderGeneration = 0;
+let lastRenderedViewportSignature = null;
 let settingsController = null;
 let updatesController = null;
 let pendingSpaceBeforeReady = false;
@@ -60,12 +61,33 @@ function pointerType() {
 }
 
 function viewportContext() {
+  const landscape = window.matchMedia?.("(orientation: landscape)").matches ?? window.innerWidth > window.innerHeight;
   return {
     width: window.innerWidth,
     height: window.innerHeight,
-    orientation: window.innerWidth > window.innerHeight ? "landscape" : "portrait",
+    orientation: landscape ? "landscape" : "portrait",
     pointer: pointerType()
   };
+}
+
+function viewportSignature(viewport) {
+  return `${viewport.width}x${viewport.height}:${viewport.orientation}:${viewport.pointer}`;
+}
+
+function scheduleViewportRender() {
+  for (const timer of viewportRenderTimers) window.clearTimeout(timer);
+  viewportRenderTimers.clear();
+  // Safari and installed iOS web apps can report orientation before their
+  // layout viewport has settled. The second pass is a no-op when the first
+  // one already rendered the final geometry.
+  for (const delay of [80, 360]) {
+    const timer = window.setTimeout(() => {
+      viewportRenderTimers.delete(timer);
+      if (viewportSignature(viewportContext()) === lastRenderedViewportSignature) return;
+      render().catch(showError);
+    }, delay);
+    viewportRenderTimers.add(timer);
+  }
 }
 
 function effectiveManualView(viewport) {
@@ -161,6 +183,7 @@ async function render() {
     if (fallback?.src && fallback.src !== rendered.src) rendered.fallbackSrc = fallback.src;
   }
   currentSelection = selection;
+  lastRenderedViewportSignature = viewportSignature(viewport);
   document.documentElement.dataset.view = selection.kind;
   document.documentElement.dataset.viewProfile = selection.viewId;
   document.documentElement.dataset.rangeType = selection.range.type;
@@ -339,10 +362,10 @@ async function init() {
     });
 
     image.addEventListener("error", useFallback);
-    window.addEventListener("resize", () => {
-      window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(() => render().catch(showError), 100);
-    });
+    window.addEventListener("resize", scheduleViewportRender, { passive: true });
+    window.addEventListener("orientationchange", scheduleViewportRender, { passive: true });
+    window.visualViewport?.addEventListener("resize", scheduleViewportRender, { passive: true });
+    window.screen?.orientation?.addEventListener?.("change", scheduleViewportRender);
 
     await render();
     document.documentElement.dataset.appReady = "1";

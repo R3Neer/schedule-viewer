@@ -30,6 +30,8 @@ test("desktop hint dismisses outside, opens Settings itself and generic checks a
 
   await page.locator("#settings-back").click();
   await page.getByRole("button", { name: "Presentación", exact: true }).click();
+  await expect(page.getByText("Alternar vistas con Espacio", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Retrato muestra la vista Vertical/)).toHaveCount(0);
   const toggle = page.locator('.switch-row input[type="checkbox"]');
   await expect(toggle).toHaveCSS("appearance", "none");
   expect((await toggle.boundingBox()).width).toBeGreaterThanOrEqual(48);
@@ -52,6 +54,50 @@ test.describe("touch floating settings control", () => {
     await expect(gear).not.toHaveClass(/is-hidden/);
     await page.clock.fastForward(1400);
     await expect(gear).toHaveClass(/is-hidden/);
+  });
+
+  test("presentation explains the current touch context without desktop-only controls", async ({ page }) => {
+    await ready(page);
+    await page.locator("#settings-button").click();
+    await page.getByRole("button", { name: "Presentación", exact: true }).click();
+
+    await expect(page.getByText("Alternar vistas con Espacio", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Retrato muestra la vista Vertical y paisaje, la Horizontal.", { exact: true })).toBeVisible();
+    await expect(page.getByText(/En pantallas táctiles/)).toHaveCount(0);
+  });
+
+  test("rotation switches between vertical and horizontal content after the viewport settles", async ({ page }) => {
+    await ready(page);
+    await expect(page.locator("html")).toHaveAttribute("data-view-profile", "vertical");
+    const portraitSource = await page.locator("#schedule-image").getAttribute("src");
+
+    await page.setViewportSize({ width: 874, height: 402 });
+    await expect(page.locator("html")).toHaveAttribute("data-view-profile", "horizontal");
+    await expect(page.locator("#schedule-image")).not.toHaveAttribute("src", portraitSource);
+
+    await page.setViewportSize({ width: 402, height: 874 });
+    await expect(page.locator("html")).toHaveAttribute("data-view-profile", "vertical");
+    await expect(page.locator("#schedule-image")).toHaveAttribute("src", portraitSource);
+  });
+
+  test("saved local images render as real thumbnails in image settings", async ({ page }) => {
+    await ready(page);
+    await page.evaluate(async () => {
+      const config = await fetch("./config/schedule.json").then(response => response.json());
+      const blob = await fetch(config.periods[0].images.active.vertical.default.src).then(response => response.blob());
+      const id = "preview-test-asset";
+      config.periods[0].images.active.vertical.default = { type: "image", asset: id, alt: "Miniatura local", fit: "contain" };
+      const { saveUserState } = await import("./local-store.js");
+      await saveUserState({ config, yaml: null, assets: [{ id, blob, mimeType: blob.type, filename: "preview.webp" }], source: "local" });
+    });
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
+    await page.locator("#settings-button").click();
+    await page.getByRole("button", { name: "Imágenes", exact: true }).click();
+    const preview = page.locator('[data-image-key$="active:vertical:default"] .image-preview');
+    await expect(preview).toHaveAttribute("src", /^blob:/);
+    await expect.poll(() => preview.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
   });
 
   test("a saved v4 config with obsolete public image paths recovers without losing its data", async ({ page }) => {

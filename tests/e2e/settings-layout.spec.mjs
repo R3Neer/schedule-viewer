@@ -27,6 +27,28 @@ test.describe("settings responsive geometry", () => {
     expect(b.y - (p.y + p.height)).toBeGreaterThanOrEqual(12);
   });
 
+  test("calendar section headings have breathing room above and below", async ({ page }) => {
+    await page.setViewportSize({ width: 402, height: 874 });
+    await openSettings(page, "Calendario");
+
+    const metrics = await page.locator("#calendar-settings").evaluate((host) => {
+      const sections = [...host.querySelectorAll(":scope > .calendar-editor")];
+      return sections.map((section, index) => {
+        const heading = section.querySelector(":scope > .settings-section-heading").getBoundingClientRect();
+        const card = section.querySelector(":scope > .settings-card").getBoundingClientRect();
+        const previous = index ? sections[index - 1].getBoundingClientRect() : null;
+        return {
+          spaceAbove: previous ? heading.top - previous.bottom : null,
+          spaceBelow: card.top - heading.bottom
+        };
+      });
+    });
+
+    expect(metrics).toHaveLength(3);
+    for (const metric of metrics) expect(metric.spaceBelow).toBeGreaterThanOrEqual(10);
+    for (const metric of metrics.slice(1)) expect(metric.spaceAbove).toBeGreaterThanOrEqual(24);
+  });
+
   test("landscape reserves useful content height and keeps close/footer inside the viewport", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 874, height: 402 });
     await openSettings(page, "Imágenes");

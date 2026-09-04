@@ -194,10 +194,14 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
   };
 
   async function previewFor(descriptor, img) {
-    if (!descriptor || !img.isConnected) return;
+    if (!descriptor) return;
     if (descriptor.src) { img.src = new URL(descriptor.src, document.baseURI).href; return; }
-    const record = pendingAssets.get(descriptor.asset) ?? await getAsset(descriptor.asset);
-    if (!record?.blob || !img.isConnected) return;
+    let record = pendingAssets.get(descriptor.asset);
+    if (!record) {
+      record = await getAsset(descriptor.asset);
+      if (!img.isConnected) return;
+    }
+    if (!record?.blob) return;
     const url = URL.createObjectURL(record.blob); previewUrls.add(url); img.src = url;
   }
   function supportedFile(file) {
@@ -243,7 +247,8 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
 
   function renderCalendar() {
     calendarHost.replaceChildren();
-    const weekdays = el("section", { class: "settings-card" }, el("h3", { text: "Patrón semanal" }));
+    const weekdayCard = el("div", { class: "settings-card" });
+    const weekdays = el("section", { class: "calendar-editor" }, el("h3", { class: "settings-section-heading", text: "Patrón semanal" }), weekdayCard);
     for (const day of WEEKDAYS) {
       const checkbox = el("input", { type: "checkbox", checked: workingConfig.calendar.activeWeekdays.includes(day) });
       checkbox.addEventListener("change", () => {
@@ -252,7 +257,7 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
         if (!set.size) { checkbox.checked = true; return setStatus("Debe quedar al menos un día activo.", "error"); }
         workingConfig.calendar.activeWeekdays = WEEKDAYS.filter(item => set.has(item)); markDirty(); renderImages();
       });
-      weekdays.append(el("label", { class: "checkbox-row" }, el("span", { text: DAY_LABELS[day] }), checkbox));
+      weekdayCard.append(el("label", { class: "checkbox-row" }, el("span", { text: DAY_LABELS[day] }), checkbox));
     }
     const exceptions = el("section", { class: "calendar-editor" }, el("h3", { class: "settings-section-heading", text: "Excepciones" }));
     workingConfig.calendar.exceptions.forEach((entry, index) => {
@@ -287,10 +292,15 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
     presentationHost.replaceChildren();
     const unit = select([["day", "Día"], ["week", "Semana"], ["month", "Mes"]], workingConfig.presentation.vertical.unit, "Presentación vertical");
     unit.onchange = () => { workingConfig.presentation.vertical.unit = unit.value; markDirty(); renderImages(); };
-    const toggle = el("input", { type: "checkbox", checked: workingConfig.presentation.desktopToggle });
-    toggle.onchange = () => { workingConfig.presentation.desktopToggle = toggle.checked; markDirty(); };
-    const card = el("section", { class: "settings-card presentation-list" }, field("Vertical", unit), el("div", { class: "settings-summary-row" }, el("span", { text: "Horizontal" }), el("span", { class: "settings-value", text: "Imagen fija por periodo" })), el("label", { class: "switch-row" }, el("span", { text: "Espacio alterna en escritorio" }), toggle));
-    presentationHost.append(card, el("p", { class: "settings-group-note", text: "En pantallas táctiles, retrato usa Vertical y paisaje usa Horizontal. La organización de Ajustes no cambia entre dispositivos." }));
+    const card = el("section", { class: "settings-card presentation-list" }, field("Vertical", unit), el("div", { class: "settings-summary-row" }, el("span", { text: "Horizontal" }), el("span", { class: "settings-value", text: "Imagen fija por periodo" })));
+    if (deviceMode === "desktop") {
+      const toggle = el("input", { type: "checkbox", checked: workingConfig.presentation.desktopToggle });
+      toggle.onchange = () => { workingConfig.presentation.desktopToggle = toggle.checked; markDirty(); };
+      card.append(el("label", { class: "switch-row" }, el("span", { text: "Alternar vistas con Espacio" }), toggle));
+      presentationHost.append(card);
+      return;
+    }
+    presentationHost.append(card, el("p", { class: "settings-group-note", text: "Retrato muestra la vista Vertical y paisaje, la Horizontal." }));
   }
 
   function renderImageRow(item) {
