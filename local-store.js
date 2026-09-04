@@ -64,6 +64,30 @@ export async function loadUserConfig(factory = globalThis.indexedDB) {
   }
 }
 
+function materializeStoredAsset(record) {
+  if (!record || record.blob instanceof Blob) return record ?? null;
+  const bytes = record.bytes;
+  if (!(bytes instanceof ArrayBuffer) && !ArrayBuffer.isView(bytes)) return record;
+  const { bytes: _storedBytes, ...metadata } = record;
+  return {
+    ...metadata,
+    blob: new Blob([bytes], { type: record.mimeType || "application/octet-stream" })
+  };
+}
+
+async function prepareAssetForStorage(record, now = new Date().toISOString()) {
+  if (!record?.id || !(record.blob instanceof Blob)) throw new TypeError(`Asset pendiente inválido: ${record?.id ?? "(sin id)"}`);
+  assertSupportedUserAsset(record, `assets.${record.id}`);
+  return {
+    id: record.id,
+    bytes: await record.blob.arrayBuffer(),
+    mimeType: record.mimeType || record.blob.type || "application/octet-stream",
+    filename: record.filename || record.id,
+    createdAt: record.createdAt || now,
+    updatedAt: now
+  };
+}
+
 export async function hasUserConfig(factory = globalThis.indexedDB) {
   return Boolean(await loadUserConfig(factory));
 }
@@ -74,7 +98,7 @@ export async function getAsset(id, factory = globalThis.indexedDB) {
     const tx = db.transaction(ASSET_STORE, "readonly");
     const record = await requestAsPromise(tx.objectStore(ASSET_STORE).get(id));
     await transactionDone(tx);
-    return record ?? null;
+    return materializeStoredAsset(record);
   });
 }
 
@@ -83,28 +107,20 @@ export async function listAssets(factory = globalThis.indexedDB) {
     const tx = db.transaction(ASSET_STORE, "readonly");
     const records = await requestAsPromise(tx.objectStore(ASSET_STORE).getAll());
     await transactionDone(tx);
-    return records ?? [];
+    return (records ?? []).map(materializeStoredAsset);
   });
 }
 
 export async function putAsset(record, factory = globalThis.indexedDB) {
   if (!record?.id || !(record.blob instanceof Blob)) throw new TypeError("Asset inválido.");
-  assertSupportedUserAsset(record);
   const now = new Date().toISOString();
-  const normalized = {
-    id: record.id,
-    blob: record.blob,
-    mimeType: record.mimeType || record.blob.type || "application/octet-stream",
-    filename: record.filename || record.id,
-    createdAt: record.createdAt || now,
-    updatedAt: now
-  };
+  const normalized = await prepareAssetForStorage(record, now);
   await withDb(factory, async (db) => {
     const tx = db.transaction(ASSET_STORE, "readwrite");
     tx.objectStore(ASSET_STORE).put(normalized);
     await transactionDone(tx);
   });
-  return normalized;
+  return materializeStoredAsset(normalized);
 }
 
 export async function deleteAsset(id, factory = globalThis.indexedDB) {
@@ -127,6 +143,7 @@ export async function saveUserState({ config, yaml = null, assets = [], source =
     periods: config.periods
   } : config);
   const now = new Date().toISOString();
+  const storedAssets = await Promise.all(assets.map(asset => prepareAssetForStorage(asset, now)));
   const record = {
     id: ACTIVE_CONFIG_ID,
     normalized: structuredClone(normalized),
@@ -139,21 +156,7 @@ export async function saveUserState({ config, yaml = null, assets = [], source =
   await withDb(factory, async (db) => {
     const tx = db.transaction([CONFIG_STORE, ASSET_STORE], "readwrite");
     const assetStore = tx.objectStore(ASSET_STORE);
-    for (const asset of assets) {
-      if (!asset?.id || !(asset.blob instanceof Blob)) {
-        tx.abort();
-        throw new TypeError(`Asset pendiente inválido: ${asset?.id ?? "(sin id)"}`);
-      }
-      assertSupportedUserAsset(asset, `assets.${asset.id}`);
-      assetStore.put({
-        id: asset.id,
-        blob: asset.blob,
-        mimeType: asset.mimeType || asset.blob.type || "application/octet-stream",
-        filename: asset.filename || asset.id,
-        createdAt: asset.createdAt || now,
-        updatedAt: now
-      });
-    }
+    for (const asset of storedAssets) assetStore.put(asset);
     tx.objectStore(CONFIG_STORE).put(record);
     await transactionDone(tx);
   });

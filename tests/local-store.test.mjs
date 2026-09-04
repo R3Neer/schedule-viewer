@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
 import {
   cleanupLegacyMigrationCaches, deleteAsset, deleteUnreferencedAssets, getAsset,
-  hasUserConfig, listAssets, loadUserConfig, putAsset, resetUserState, saveUserState
+  hasUserConfig, listAssets, loadUserConfig, openScheduleDb, putAsset, resetUserState, saveUserState
 } from "../local-store.js";
 import { makeConfig } from "./fixture-config.mjs";
 
@@ -22,6 +22,29 @@ const gif = await getAsset("default-local");
 assert.equal(gif.filename, "animated.gif");
 assert.equal(gif.mimeType, "image/gif");
 assert.deepEqual(new Uint8Array(await gif.blob.arrayBuffer()), bytes);
+const rawDb = await openScheduleDb();
+const rawTransaction = rawDb.transaction("assets", "readonly");
+const rawAsset = await new Promise((resolve, reject) => {
+  const request = rawTransaction.objectStore("assets").get("default-local");
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+rawDb.close();
+assert.equal(rawAsset.blob, undefined);
+assert.deepEqual(new Uint8Array(rawAsset.bytes), bytes);
+
+const legacyDb = await openScheduleDb();
+const legacyTransaction = legacyDb.transaction("assets", "readwrite");
+legacyTransaction.objectStore("assets").put({ id: "legacy-blob", blob: new Blob([bytes], { type: "image/gif" }), mimeType: "image/gif", filename: "legacy.gif" });
+await new Promise((resolve, reject) => {
+  legacyTransaction.oncomplete = resolve;
+  legacyTransaction.onerror = () => reject(legacyTransaction.error);
+  legacyTransaction.onabort = () => reject(legacyTransaction.error);
+});
+legacyDb.close();
+const legacyAsset = await getAsset("legacy-blob");
+assert.deepEqual(new Uint8Array(await legacyAsset.blob.arrayBuffer()), bytes);
+await deleteAsset("legacy-blob");
 
 await assert.rejects(putAsset({ id: "svg", blob: new Blob(["<svg/>"], { type: "image/svg+xml" }), filename: "x.svg" }), /SVG/);
 await putAsset({ id: "orphan", blob: new Blob([new Uint8Array([137, 80])], { type: "image/png" }), filename: "orphan.png" });
