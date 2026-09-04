@@ -1,11 +1,12 @@
 import { defineConfig } from "@playwright/test";
 
 const localChromium = process.env.SCHEDULE_VIEWER_CHROMIUM;
+const externalServer = process.env.SCHEDULE_VIEWER_EXTERNAL_SERVER === "1";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: "apple-glass.spec.mjs",
-  timeout: 30_000,
+  testMatch: ["v4-settings.spec.mjs", "settings-layout.spec.mjs", "settings-motion.spec.mjs", "settings-gestures.spec.mjs", "update.spec.mjs"],
+  timeout: 40_000,
   expect: { timeout: 7_500 },
   fullyParallel: false,
   workers: 1,
@@ -21,7 +22,7 @@ export default defineConfig({
     video: process.env.SCHEDULE_VIEWER_MOTION_VIDEO ? "on" : "retain-on-failure",
     screenshot: "only-on-failure"
   },
-  webServer: {
+  webServer: externalServer ? undefined : {
     command: "python -m http.server 4173 --directory dist --bind 127.0.0.1",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,

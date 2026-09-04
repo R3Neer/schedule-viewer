@@ -47,7 +47,7 @@ jobs:
       - name: Reject inherited private schedule identifiers
         run: python tools/audit_public_tree.py
 
-      - name: Validate and compile YAML v3 demo
+      - name: Validate and compile YAML v4 demo
         run: |
           python tools/validate_config.py
           python tools/compile_config.py --out test-output/schedule.json
@@ -56,14 +56,14 @@ jobs:
           from pathlib import Path
           data = json.loads(Path("test-output/schedule.json").read_text(encoding="utf-8"))
           source = Path("config/schedule.yaml").read_text(encoding="utf-8")
-          assert data["version"] == 3
-          assert data["calendar"]["inactive"]["defaultImage"]["src"]
-          assert data["desktop"]["defaultView"] in data["views"]
+          assert data["version"] == 4
+          assert data["periods"][0]["images"]["active"]["horizontal"]["src"]
+          assert data["presentation"]["vertical"]["unit"] in ("day", "week", "month")
           print("compiled neutral demo contract: OK")
           PY
 
       - name: Test YAML compiler and negative validation contracts
-        run: python tests/config-v3.test.py
+        run: python tests/config-v4.test.py
 
       - name: Test calendar, persistence, package, renderer and Service Worker contracts
         run: npm test
@@ -108,9 +108,9 @@ jobs:
           assert f'./releases/{release}/app.js?v={release}' in html
           for filename in ("app.js", "settings-ui.js", "settings-motion.js", "settings-gestures.js", "app-updates.js", "styles.css", "lazy/config-io.js", "lazy/yaml-editor.js", "lazy/apple-glass.js", "lazy/apple-glass.css"):
               assert (Path("dist/releases") / release / filename).read_bytes() == (Path("dist") / filename).read_bytes()
-          assert config["version"] == 3
-          assert len(config["views"]) >= 4
-          assert config["calendar"]["inactive"]["defaultImage"]["type"] == "image"
+          assert config["version"] == 4
+          assert config["periods"]
+          assert config["periods"][0]["images"]["active"]["horizontal"]["type"] == "image"
           print("dist + lazy boundaries + Apple glass isolation: OK")
           PY
 
@@ -164,9 +164,9 @@ jobs:
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
-          for file in index.html favicon.svg manifest.webmanifest icons/apple-touch-icon.png app-updates.js apple-liquid-glass.css lazy/apple-glass.js lazy/apple-glass.css lazy/yaml-editor.js lazy/config-io.js config/schedule.json releases/20260904-v4-18/app.js releases/20260904-v4-18/settings-ui.js releases/20260904-v4-18/settings-motion.js releases/20260904-v4-18/settings-gestures.js releases/20260904-v4-18/app-updates.js; do
+          for file in index.html favicon.svg manifest.webmanifest icons/apple-touch-icon.png app-updates.js apple-liquid-glass.css lazy/apple-glass.js lazy/apple-glass.css lazy/yaml-editor.js lazy/config-io.js config/schedule.json releases/20260904-v5-0/app.js releases/20260904-v5-0/settings-ui.js releases/20260904-v5-0/settings-motion.js releases/20260904-v5-0/settings-gestures.js releases/20260904-v5-0/app-updates.js; do
             curl --fail --silent --show-error --retry 4 --retry-delay 5 --retry-all-errors "${PAGE_URL%/}/$file" --output "$RUNNER_TEMP/$(basename "$file")"
           done
-          grep -q '20260904-v4-18' "$RUNNER_TEMP/index.html"
+          grep -q '20260904-v5-0' "$RUNNER_TEMP/index.html"
           grep -q 'cm-editor' "$RUNNER_TEMP/yaml-editor.js"
           grep -q 'settings-menu-row' "$RUNNER_TEMP/apple-liquid-glass.css"

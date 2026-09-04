@@ -82,7 +82,7 @@ test("wrong-direction and content vertical gestures do not navigate or dismiss",
 });
 
 test("header swipe down cancels when short, closes when committed and respects dirty confirmation", async ({ page }) => {
-  await loadSettings(page, "schedule");
+  await loadSettings(page, "periods");
   const title = await page.locator("#settings-title").boundingBox();
   const start = { x: title.x + title.width / 2, y: title.y + title.height / 2 };
 
@@ -90,11 +90,11 @@ test("header swipe down cancels when short, closes when committed and respects d
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
   await expect(page.locator("#settings-dialog")).toBeVisible();
 
-  await page.getByLabel("Nombre", { exact: true }).fill("Borrador táctil");
+  await page.getByLabel("Nombre del periodo").first().fill("Borrador táctil");
   page.once("dialog", prompt => prompt.dismiss());
   await pointerSwipe(page, { target: "#settings-title", start, end: { x: start.x, y: start.y + 300 } });
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
-  await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("Borrador táctil");
+  await expect(page.getByLabel("Nombre del periodo").first()).toHaveValue("Borrador táctil");
   await expect.poll(() => page.locator(".settings-sheet").evaluate(node => new DOMMatrix(getComputedStyle(node).transform).m42)).toBeCloseTo(0, 1);
 
   page.once("dialog", prompt => prompt.accept());

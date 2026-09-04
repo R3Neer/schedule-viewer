@@ -1,72 +1,52 @@
 import assert from "node:assert/strict";
 import {
-  collectAssetIds,
-  compileSourceConfig,
-  ConfigValidationError,
-  decompileConfig,
-  normalizeImageDescriptor
+  ConfigValidationError, assertSupportedUserAsset, collectAssetIds,
+  compileSourceConfig, decompileConfig, migrateV3Config
 } from "../config-schema.js";
-import { makeConfig } from "./fixture-config.mjs";
+import { makeConfig, makeSourceConfig } from "./fixture-config.mjs";
 
-const compiled = makeConfig();
-const source = decompileConfig(compiled);
-const roundtrip = compileSourceConfig(source);
-assert.equal(roundtrip.version, 3);
-assert.equal(roundtrip.app.title, compiled.app.title);
-assert.equal(roundtrip.desktop.primaryView, "wide_default");
-assert.equal(roundtrip.desktop.shortcuts.toggleView.enabled, true);
-assert.deepEqual(roundtrip.views.phone_portrait.range, { type: "day" });
-assert.equal(roundtrip.academicYears[0].terms[0].sessions.length, 2);
+const compiled = compileSourceConfig(makeSourceConfig());
+assert.equal(compiled.version, 4);
+assert.equal(compiled.periods.length, 2);
+assert.deepEqual(compileSourceConfig(decompileConfig(compiled)), compiled);
 
-const local = structuredClone(source);
-local.calendar.inactive.default_image = {
-  asset: "inactive-default-local",
-  alt: "Inactivo local",
-  fit: "cover"
+const overlapping = makeSourceConfig();
+overlapping.periods[1].start = "2026-12-20";
+assert.throws(() => compileSourceConfig(overlapping), error => error instanceof ConfigValidationError && error.path === "periods" && /solapan/.test(error.message));
+
+const svg = makeSourceConfig();
+svg.periods[0].images.active.horizontal = { src: "assets/unsafe.svg" };
+assert.throws(() => compileSourceConfig(svg), /SVG no está permitido/);
+assert.throws(() => assertSupportedUserAsset({ mimeType: "image/svg+xml" }), /SVG no está permitido/);
+for (const mimeType of ["image/png", "image/jpeg", "image/webp", "image/avif", "image/gif"]) {
+  assert.doesNotThrow(() => assertSupportedUserAsset({ mimeType }));
+}
+
+const assetConfig = makeConfig();
+assetConfig.periods[0].images.active.horizontal = { type: "image", asset: "hero", fit: "contain", alt: "" };
+assetConfig.calendar.exceptions[0].images.vertical = { type: "image", asset: "holiday", fit: "cover", alt: "" };
+assert.deepEqual(new Set(collectAssetIds(assetConfig)), new Set(["hero", "holiday"]));
+
+const days = Object.fromEntries(["monday", "tuesday", "wednesday", "thursday", "friday"].map(day => [day, `assets/legacy/${day}.webp`]));
+const legacy = {
+  version: 3,
+  app: { timezone: "Europe/Madrid" }, defaults: { weekStartsOn: "monday", imageFit: "contain" }, runtime: {},
+  calendar: { inactive: { defaultImage: "assets/legacy/inactive.webp" }, inactiveWeekdays: { saturday: {}, sunday: {} } },
+  states: { vacationsHorizontal: "assets/legacy/vacation.webp" },
+  academicYears: [{
+    id: "legacy", calendar: { terms: [{ termId: "q1", start: "2026-09-01", end: "2026-12-20" }], holidays: [], inactiveDates: [], periods: [] },
+    terms: [{ id: "q1", displayName: "Periodo importado", assets: { week: "assets/legacy/week.webp", days } }]
+  }]
 };
-local.academic_years[0].calendar.holidays[0].image = {
-  asset: "holiday-gif",
-  alt: "Festivo local"
-};
-local.desktop.shortcuts.toggle_view.enabled = false;
-const localCompiled = compileSourceConfig(local);
-assert.equal(localCompiled.calendar.inactive.defaultImage.asset, "inactive-default-local");
-assert.equal(localCompiled.calendar.inactive.defaultImage.src, undefined);
-assert.equal(localCompiled.desktop.shortcuts.toggleView.enabled, false);
-assert.deepEqual(new Set(collectAssetIds(localCompiled)), new Set(["inactive-default-local", "holiday-gif"]));
+const migrated = migrateV3Config(legacy);
+assert.equal(migrated.version, 4);
+assert.equal(migrated.periods[0].name, "Periodo importado");
+assert.equal(migrated.periods[0].images.active.horizontal.src, "assets/legacy/week.webp");
+const structuredOnly = structuredClone(legacy);
+delete structuredOnly.academicYears[0].terms[0].assets.days.friday;
+assert.throws(() => migrateV3Config(structuredOnly), /horario estructurado/);
+const legacySvg = structuredClone(legacy);
+legacySvg.academicYears[0].terms[0].assets.week = "assets/legacy/week.svg";
+assert.throws(() => migrateV3Config(legacySvg), /SVG no está permitido/);
 
-assert.deepEqual(normalizeImageDescriptor({ asset: "x", alt: "X" }), {
-  type: "image", asset: "x", fit: "contain", alt: "X"
-});
-assert.throws(
-  () => normalizeImageDescriptor({ src: "a.webp", asset: "x" }),
-  (error) => error instanceof ConfigValidationError && /exactamente uno/.test(error.message)
-);
-assert.throws(
-  () => normalizeImageDescriptor({}),
-  (error) => error instanceof ConfigValidationError && /exactamente uno/.test(error.message)
-);
-
-const noGeneratedAssets = structuredClone(source);
-delete noGeneratedAssets.academic_years[0].terms[0].assets;
-const withoutAssets = compileSourceConfig(noGeneratedAssets);
-assert.equal(withoutAssets.academicYears[0].terms[0].assets.week, null);
-assert.deepEqual(withoutAssets.academicYears[0].terms[0].assets.days, {});
-
-const invalid = structuredClone(source);
-invalid.views.wide_default.range = { type: "fortnightish" };
-assert.throws(
-  () => compileSourceConfig(invalid),
-  (error) => error instanceof ConfigValidationError && error.path === "views.wide_default.range.type"
-);
-
-const ambiguous = structuredClone(source);
-ambiguous.academic_years[0].calendar.periods = [
-  { id: "a", type: "vacation", start: "2026-10-01", end: "2026-10-10", image: { asset: "a" } },
-  { id: "b", type: "vacation", start: "2026-10-05", end: "2026-10-15", image: { asset: "b" } }
-];
-assert.throws(() => compileSourceConfig(ambiguous), /se solapan/);
-ambiguous.academic_years[0].calendar.periods[1].priority = 2;
-assert.equal(compileSourceConfig(ambiguous).academicYears[0].calendar.periods.length, 2);
-
-console.log("config-schema: roundtrip, assets locales y validación semántica OK");
+console.log("config-schema: contrato v4, roundtrip, migración segura y formatos de imagen OK");

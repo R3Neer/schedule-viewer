@@ -27,6 +27,7 @@ const context = {
         "schedule-viewer-offline-20260904-v4-16",
         "schedule-viewer-offline-20260904-v4-17",
         "schedule-viewer-offline-20260904-v4-18",
+        "schedule-viewer-offline-20260904-v5-0",
         "another-app-cache"
       ];
     },
@@ -53,38 +54,31 @@ assert.equal(typeof context.scheduleAssetPaths, "function");
 assert.equal(typeof context.isMigrationCache, "function");
 
 const config = {
-  states: {
-    noClassTodayVertical: "assets/states/inactive.webp",
-    vacationsHorizontal: "assets/states/vacations.webp"
-  },
   calendar: {
-    inactive: { defaultImage: { type: "image", src: "assets/inactive/default.webp" } },
-    inactiveWeekdays: { sunday: { image: { type: "image", asset: "sunday-local" } } }
+    exceptions: [{ images: { vertical: { type: "image", src: "assets/inactive/holiday.avif" } } }],
+    inactivePeriods: [{ images: { horizontal: { type: "image", asset: "winter-local" } } }]
   },
-  academicYears: [{
-    calendar: {
-      holidays: [{ date: "2026-12-25", image: { type: "image", src: "assets/inactive/christmas.svg" } }],
-      periods: [{ id: "winter", image: { type: "image", src: "data:image/png;base64,AAAA" } }]
+  periods: [{ images: {
+    active: {
+      vertical: { default: { type: "image", src: "assets/demo/vertical.webp" }, days: { monday: { type: "image", src: "assets/demo/monday.webp" } } },
+      horizontal: { type: "image", src: "assets/demo/horizontal.webp" }
     },
-    terms: [{
-      assets: { week: "assets/q1/week.webp", days: { monday: "assets/q1/monday.webp" } },
-      content: { days: { monday: { type: "image", src: "https://cdn.example.org/remote.png" } } }
-    }]
-  }],
-  rules: [{ content: { type: "image", src: "assets/custom/rule.avif" } }]
+    inactive: {
+      vertical: { type: "image", src: "assets/inactive/default.webp" },
+      horizontal: { type: "image", src: "https://cdn.example.org/remote.png" }
+    }
+  } }]
 };
 
 const paths = [...context.scheduleAssetPaths(config)].sort();
 assert.deepEqual(paths, [
-  "https://example.test/schedule-viewer/assets/custom/rule.avif",
-  "https://example.test/schedule-viewer/assets/inactive/christmas.svg",
+  "https://example.test/schedule-viewer/assets/demo/horizontal.webp",
+  "https://example.test/schedule-viewer/assets/demo/monday.webp",
+  "https://example.test/schedule-viewer/assets/demo/vertical.webp",
   "https://example.test/schedule-viewer/assets/inactive/default.webp",
-  "https://example.test/schedule-viewer/assets/q1/monday.webp",
-  "https://example.test/schedule-viewer/assets/q1/week.webp",
-  "https://example.test/schedule-viewer/assets/states/inactive.webp",
-  "https://example.test/schedule-viewer/assets/states/vacations.webp"
+  "https://example.test/schedule-viewer/assets/inactive/holiday.avif"
 ]);
-assert.ok(!paths.some((path) => path.includes("sunday-local")), "los Blob de IndexedDB no deben duplicarse en Cache Storage");
+assert.ok(!paths.some((path) => path.includes("winter-local")), "los Blob de IndexedDB no deben duplicarse en Cache Storage");
 
 let activation = null;
 listeners.get("activate")({ waitUntil(promise) { activation = promise; } });
@@ -97,7 +91,8 @@ assert.deepEqual(deletedCaches.sort(), [
   "schedule-viewer-offline-20260903-v4-6",
   "schedule-viewer-offline-20260903-v4-8",
   "schedule-viewer-offline-20260904-v4-16",
-  "schedule-viewer-offline-20260904-v4-17"
+  "schedule-viewer-offline-20260904-v4-17",
+  "schedule-viewer-offline-20260904-v4-18"
 ].sort());
 assert.equal(claimed, true);
 assert.equal(context.isMigrationCache("schedule-viewer-offline-v3"), true);
@@ -105,12 +100,12 @@ assert.equal(context.isMigrationCache("schedule-viewer-offline-v3-content"), tru
 assert.equal(context.isMigrationCache("schedule-viewer-offline-v4"), false);
 
 assert.match(code, /config\/schedule\.json/);
-assert.equal(vm.runInContext("CACHE_NAME", context), "schedule-viewer-offline-20260904-v4-18");
+assert.equal(vm.runInContext("CACHE_NAME", context), "schedule-viewer-offline-20260904-v5-0");
 assert.match(code, /MIGRATION_CACHE_PREFIX/);
 assert.match(code, /discoverImageDescriptors/);
 assert.match(code, /ignoreSearch/);
 assert.match(code, /local-store\.js/);
-assert.match(code, /demo-labels\.js/, "la migración de nombres debe funcionar también sin conexión");
+assert.doesNotMatch(code, /demo-labels\.js/, "v4 no depende del antiguo vocabulario académico");
 assert.match(code, /lazy\/config-io\.js/, "import/export debe estar disponible offline sin ejecutar su bundle en la carga inicial");
 assert.doesNotMatch(code, /lazy\/yaml-editor\.js/, "CodeMirror debe seguir siendo descarga realmente bajo demanda");
 

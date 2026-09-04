@@ -11,13 +11,24 @@ OUT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "dist"
 config = json.loads((OUT / "config" / "schedule.json").read_text(encoding="utf-8"))
 
 expected: list[tuple[str, tuple[int, int]]] = []
-for year in config["academicYears"]:
-    for term in year["terms"]:
-        expected.append((term["assets"]["week"], (1600, 1000)))
-        for path in term["assets"]["days"].values():
-            expected.append((path, (1080, 2160)))
-expected.append((config["states"]["noClassTodayVertical"], (1080, 2160)))
-expected.append((config["states"]["vacationsHorizontal"], (1600, 1000)))
+seen: set[str] = set()
+
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("type") == "image" and value.get("src"):
+            relative = value["src"]
+            if relative not in seen:
+                seen.add(relative)
+                orientation = "horizontal" if any(token in relative for token in ("horizontal", "week-")) else "vertical"
+                expected.append((relative, (1600, 1000) if orientation == "horizontal" else (1080, 2160)))
+        for item in value.values():
+            visit(item)
+    elif isinstance(value, list):
+        for item in value:
+            visit(item)
+
+visit(config["periods"])
+visit(config["calendar"])
 
 for relative, size in expected:
     path = OUT / relative

@@ -84,9 +84,9 @@ test("sheet and panel trajectories are monotonic, stable and visually inspectabl
   const sheetBefore = await page.locator(".settings-sheet").boundingBox();
   const navigation = await page.evaluate(() => new Promise(resolve => {
     const dialog = document.querySelector("#settings-dialog");
-    const incoming = document.querySelector("#settings-schedule-panel");
+    const incoming = document.querySelector("#settings-periods-panel");
     const samples = [], started = performance.now();
-    document.querySelector('[data-settings-tab="schedule"]').click();
+    document.querySelector('[data-settings-tab="periods"]').click();
     const sample = () => {
       const matrix = new DOMMatrix(getComputedStyle(incoming).transform);
       samples.push({ time: performance.now() - started, x: matrix.m41, opacity: Number(getComputedStyle(incoming).opacity), state: dialog.dataset.motionState });
@@ -102,22 +102,22 @@ test("sheet and panel trajectories are monotonic, stable and visually inspectabl
   const sheetAfter = await page.locator(".settings-sheet").boundingBox();
   expect(Math.abs(sheetAfter.height - sheetBefore.height)).toBeLessThanOrEqual(1);
   await expect(page.locator(".settings-title-ghost")).toHaveCount(0);
-  await page.screenshot({ path: testInfo.outputPath("motion-schedule-final.png") });
+  await page.screenshot({ path: testInfo.outputPath("motion-periods-final.png") });
 });
 
 test("navigation can reverse, preserves scroll and restores focus", async ({ page }) => {
   await loadApp(page);
   await openSettings(page);
-  await page.evaluate(() => document.querySelector('[data-settings-tab="schedule"]').click());
+  await page.evaluate(() => document.querySelector('[data-settings-tab="periods"]').click());
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "navigating");
   await page.evaluate(() => document.querySelector("#settings-back").click());
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-panel", "home");
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
-  await expect(page.locator("#settings-schedule-panel")).toBeHidden();
+  await expect(page.locator("#settings-periods-panel")).toBeHidden();
   await expect(page.locator(".settings-title-ghost")).toHaveCount(0);
   await expect(page.locator(".settings-scroll")).not.toHaveAttribute("inert", "");
 
-  await goTo(page, "schedule");
+  await goTo(page, "calendar");
   const storedScroll = await page.locator(".settings-scroll").evaluate(node => {
     node.scrollTop = Math.min(180, node.scrollHeight - node.clientHeight);
     return node.scrollTop;
@@ -125,8 +125,8 @@ test("navigation can reverse, preserves scroll and restores focus", async ({ pag
   expect(storedScroll).toBeGreaterThan(0);
   await page.locator("#settings-back").click();
   await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
-  await expect(page.locator('[data-settings-tab="schedule"]')).toBeFocused();
-  await goTo(page, "schedule");
+  await expect(page.locator('[data-settings-tab="calendar"]')).toBeFocused();
+  await goTo(page, "calendar");
   await expect.poll(() => page.locator(".settings-scroll").evaluate(node => node.scrollTop)).toBeCloseTo(storedScroll, 0);
 
   for (const panel of ["images", "backup", "advanced"]) {

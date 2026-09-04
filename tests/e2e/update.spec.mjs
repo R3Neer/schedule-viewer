@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-test("updating v4.5 replaces cached lazy code and preserves local config and image bytes", async ({ page }) => {
+test("updating an installed client replaces cached code and preserves v4 config and exact image bytes", async ({ page }) => {
   const dist = fileURLToPath(new URL("../../dist/", import.meta.url));
   const legacy = await readFile(new URL("../fixtures/service-worker-v4-5.js", import.meta.url));
   let upgraded = false;
@@ -28,25 +28,23 @@ test("updating v4.5 replaces cached lazy code and preserves local config and ima
     await page.evaluate(async () => {
       const { saveUserState } = await import("./local-store.js");
       const config = await (await fetch("./config/schedule.json")).json();
-      config.app.title = "Conservado tras actualizar";
-      config.calendar.inactive.defaultImage = { type: "image", asset: "upgrade-image", alt: "Local" };
-      await saveUserState({ config, assets: [{ id: "upgrade-image", blob: new Blob(["exact-local-bytes"], { type: "image/svg+xml" }), mimeType: "image/svg+xml" }] });
+      config.periods[0].name = "Conservado tras actualizar";
+      await saveUserState({ config, assets: [{ id: "upgrade-image", blob: new Blob(["GIF89a-exact-local-bytes"], { type: "image/gif" }), mimeType: "image/gif", filename: "animated.gif" }] });
       const cache = await caches.open("schedule-viewer-offline-v4-1");
       await cache.put(new URL("./lazy/yaml-editor.js", location.href), new Response("throw new Error('STALE_BUNDLE');", { headers: { "Content-Type": "text/javascript" } }));
     });
     upgraded = true;
     await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration()).update(); });
     await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
-    await expect(page).toHaveTitle(/^Conservado tras actualizar/);
-    await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-20260904-v4-18"))).toBe(true);
+    await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-20260904-v5-0"))).toBe(true);
     await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-v4-1"))).toBe(false);
     const audit = await page.evaluate(async () => {
-      const { getAsset } = await import("./local-store.js");
+      const { getAsset, loadUserConfig } = await import("./local-store.js");
       const image = await getAsset("upgrade-image");
       const bundle = await (await fetch("./lazy/yaml-editor.js")).text();
-      return { bytes: await image.blob.text(), stale: bundle.includes("STALE_BUNDLE"), editor: bundle.includes("cm-editor") };
+      return { bytes: await image.blob.text(), mime: image.mimeType, filename: image.filename, name: (await loadUserConfig()).normalized.periods[0].name, stale: bundle.includes("STALE_BUNDLE"), editor: bundle.includes("cm-editor") };
     });
-    expect(audit).toEqual({ bytes: "exact-local-bytes", stale: false, editor: true });
+    expect(audit).toEqual({ bytes: "GIF89a-exact-local-bytes", mime: "image/gif", filename: "animated.gif", name: "Conservado tras actualizar", stale: false, editor: true });
     await page.locator("#settings-button").click();
     await page.getByRole("button", { name: "Avanzado", exact: true }).click();
     await page.locator("#yaml-edit").click();

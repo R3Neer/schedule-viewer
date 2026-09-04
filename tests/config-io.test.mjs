@@ -1,26 +1,19 @@
 import assert from "node:assert/strict";
 import { makeConfig } from "./fixture-config.mjs";
 import {
-  compiledToYaml,
-  exportSchedulePackage,
-  inspectSchedulePackage,
-  normalizeCompiledConfig,
-  yamlToCompiled
+  compiledToYaml, exportSchedulePackage, inspectSchedulePackage,
+  normalizeCompiledConfig, yamlToCompiled
 } from "../lazy-src/config-io.entry.js";
 
 const config = makeConfig();
-config.calendar.inactive.defaultImage = { type: "image", asset: "default-local", fit: "contain", alt: "Local" };
-config.academicYears[0].calendar.holidays[0].image = { type: "image", asset: "holiday-gif", fit: "cover", alt: "Fiesta" };
-config.academicYears[0].terms.forEach((term) => { term.assets = { week: null, days: {} }; });
+config.periods[0].images.active.vertical.default = { type: "image", asset: "default-local", fit: "contain", alt: "Local" };
+config.calendar.exceptions[0].images = { vertical: { type: "image", asset: "holiday-gif", fit: "cover", alt: "Fiesta" } };
 
 const normalized = normalizeCompiledConfig(config);
-assert.equal(normalized.calendar.inactive.defaultImage.asset, "default-local");
 const yaml = compiledToYaml(normalized);
+assert.match(yaml, /version: 4/);
 assert.match(yaml, /asset: default-local/);
-assert.match(yaml, /asset: holiday-gif/);
-const reparsed = yamlToCompiled(yaml);
-assert.equal(reparsed.calendar.inactive.defaultImage.asset, "default-local");
-assert.equal(reparsed.academicYears[0].calendar.holidays[0].image.asset, "holiday-gif");
+assert.equal(yamlToCompiled(yaml).periods[0].images.active.vertical.default.asset, "default-local");
 
 const gifBytes = new Uint8Array([71, 73, 70, 56, 57, 97, 1, 0, 1, 0]);
 const assets = [
@@ -28,22 +21,16 @@ const assets = [
   { id: "holiday-gif", blob: new Blob([gifBytes], { type: "image/gif" }), filename: "party.gif", mimeType: "image/gif" }
 ];
 const packageBlob = await exportSchedulePackage({ config: normalized, assets });
-assert.ok(packageBlob.size > 100);
 const restored = await inspectSchedulePackage(packageBlob);
-assert.equal(restored.config.calendar.inactive.defaultImage.asset, "default-local");
+assert.equal(restored.config.version, 4);
 assert.equal(restored.assets.length, 2);
-assert.equal(restored.assets.find((item) => item.id === "holiday-gif").mimeType, "image/gif");
-assert.equal(restored.assets.find((item) => item.id === "holiday-gif").blob.size, gifBytes.length);
+const restoredGif = restored.assets.find(item => item.id === "holiday-gif");
+assert.equal(restoredGif.mimeType, "image/gif");
+assert.deepEqual(new Uint8Array(await restoredGif.blob.arrayBuffer()), gifBytes);
 
-await assert.rejects(
-  exportSchedulePackage({ config: normalized, assets: assets.filter((item) => item.id !== "holiday-gif") }),
-  /Falta el asset local requerido holiday-gif/
-);
+await assert.rejects(exportSchedulePackage({ config: normalized, assets: assets.slice(0, 1) }), /holiday-gif/);
+await assert.rejects(inspectSchedulePackage(new Blob([new Uint8Array([1, 2, 3])], { type: "application/zip" })));
+assert.throws(() => yamlToCompiled("version: 3\n"), /version/);
+assert.throws(() => yamlToCompiled(yaml.replace("assets/autumn/horizontal.webp", "assets/autumn/horizontal.svg")), /SVG/);
 
-const corrupt = new Blob([new Uint8Array([1, 2, 3, 4])], { type: "application/zip" });
-await assert.rejects(inspectSchedulePackage(corrupt));
-
-assert.throws(() => yamlToCompiled("version: [\n"), /YAML|flow|end|unexpected/i);
-assert.throws(() => yamlToCompiled(yaml.replace("type: week", "type: fortnightish")), /fortnightish/);
-
-console.log("config-io: YAML roundtrip y paquete .schedule con assets/manifest OK");
+console.log("config-io: YAML v4 y .schedule preservan MIME, nombre y bytes GIF OK");

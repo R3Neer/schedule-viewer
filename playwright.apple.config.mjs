@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const localChromium = process.env.SCHEDULE_VIEWER_CHROMIUM;
+const externalServer = process.env.SCHEDULE_VIEWER_EXTERNAL_SERVER === "1";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -19,7 +20,7 @@ export default defineConfig({
     trace: "off",
     screenshot: "only-on-failure"
   },
-  webServer: {
+  webServer: externalServer ? undefined : {
     command: "python -m http.server 4175 --directory dist --bind 127.0.0.1",
     url: "http://127.0.0.1:4175",
     reuseExistingServer: false,
