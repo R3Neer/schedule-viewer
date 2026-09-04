@@ -1,0 +1,9 @@
+dist/
+node_modules/
+test-output/
+test-results/
+playwright-report/
+config/*.json
+__pycache__/
+*.pyc
+.DS_Store

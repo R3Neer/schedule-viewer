@@ -1,0 +1,87 @@
+import assert from "node:assert/strict";
+import { imageTargets, imageTerms } from "../settings-ui.js";
+import { selectScheduleContent } from "../content-core.js";
+import { makeConfig } from "./fixture-config.mjs";
+import { compiledToYaml, yamlToCompiled, exportSchedulePackage, inspectSchedulePackage } from "../lazy-src/config-io.entry.js";
+
+const config = makeConfig();
+const original = structuredClone(config);
+const terms = imageTerms(config);
+const active = imageTargets(config, "active", terms[0].key);
+assert.equal(active.length, 6);
+assert.deepEqual(active.map(item => item.label), ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Vista semanal"]);
+const descriptor = id => ({ type: "image", asset: id, fit: "contain", alt: id });
+active[0].set(descriptor("monday"));
+active[1].set(descriptor("tuesday"));
+active.at(-1).set(descriptor("week"));
+imageTargets(config, "active", terms[1].key)[0].set(descriptor("q2-monday"));
+const select = (date, viewId = "phone_portrait", cfg = config) => selectScheduleContent(cfg, { date, viewId }).content;
+assert.equal(select("2026-09-07").asset, "monday");
+assert.equal(select("2026-09-08").asset, "tuesday");
+assert.equal(select("2026-09-09").type, "generated-schedule");
+assert.equal(select("2026-09-07", "phone_landscape").asset, "week");
+assert.equal(select("2026-09-07", "wide_default").asset, "week");
+assert.equal(select("2027-01-25").asset, "q2-monday");
+assert.equal(select("2026-09-12").src, original.calendar.inactive.defaultImage.src);
+delete config.calendar.inactiveWeekdays.saturday;
+imageTargets(config, "active", terms[0].key).find(item => item.label === "Sábado").set(descriptor("saturday"));
+config.calendar.inactiveWeekdays.saturday = {};
+assert.ok(!imageTargets(config, "active", terms[0].key).some(item => item.label === "Sábado"));
+assert.equal(config.academicYears[0].terms[0].content.days.saturday.asset, "saturday", "hiding a day must retain its image");
+config.calendar.activeDates.push({ date: "2026-09-12" });
+assert.equal(select("2026-09-12").asset, "saturday");
+
+config.calendar.inactiveDates.push({ date: "2026-09-10", label: "Global" });
+const global = imageTargets(config).find(item => item.key === "inactive:global:2026-09-10");
+global.set(descriptor("global"));
+assert.equal(select("2026-09-10").asset, "global");
+const inactive = imageTargets(config);
+assert.ok(inactive.some(item => item.key === "holiday:2026-2027:2026-10-12"));
+assert.ok(inactive.some(item => item.key === "inactive:2026-2027:2026-11-13"));
+assert.ok(inactive.some(item => item.key === "period:2026-2027:winter"));
+const recurring = inactive.find(item => item.key === "weekday:sunday");
+recurring.set(descriptor("sunday"));
+assert.equal(select("2026-09-13").asset, "sunday");
+recurring.remove();
+assert.equal(select("2026-09-13").src, original.calendar.inactive.defaultImage.src);
+assert.equal(inactive[0].remove, undefined);
+
+// Full YAML/package roundtrip retains active and global images and their exact bytes.
+const normalized = yamlToCompiled(compiledToYaml(config));
+assert.equal(select("2026-09-07", "phone_portrait", normalized).asset, "monday");
+assert.equal(select("2026-09-10", "phone_portrait", normalized).asset, "global");
+const ids = ["monday", "tuesday", "week", "q2-monday", "saturday", "global"];
+const assets = ids.map(id => ({ id, blob: new Blob([id], { type: "image/png" }), mimeType: "image/png", filename: id + ".png" }));
+const restored = await inspectSchedulePackage(await exportSchedulePackage({ config: normalized, assets }));
+assert.equal(restored.assets.length, ids.length);
+for (const asset of restored.assets) assert.equal(await asset.blob.text(), asset.id);
+assert.equal(select("2027-01-25", "phone_portrait", restored.config).asset, "q2-monday");
+assert.equal(select("2026-09-07", "wide_default", restored.config).asset, "week");
+
+// Removing a custom image never removes lessons, generated assets, other days, or advanced overrides.
+config.academicYears[0].terms[0].content.views = { desktop_portrait: descriptor("advanced-view") };
+active[0].remove();
+assert.equal(select("2026-09-07").type, "generated-schedule");
+assert.equal(select("2026-09-07", "desktop_portrait").asset, "advanced-view");
+assert.equal(select("2026-09-08").asset, "tuesday");
+assert.equal(select("2026-09-07", "wide_default").asset, "week");
+active.at(-1).remove();
+assert.equal(select("2026-09-07", "wide_default").type, "generated-schedule");
+assert.deepEqual(config.rules, original.rules);
+assert.deepEqual(config.academicYears[0].terms[0].assets, original.academicYears[0].terms[0].assets);
+assert.deepEqual(config.academicYears[0].terms[0].sessions, original.academicYears[0].terms[0].sessions);
+global.remove();
+assert.equal(select("2026-09-10").src, original.calendar.inactive.defaultImage.src);
+assert.equal(config.calendar.inactiveDates[0].date, "2026-09-10");
+
+const repeated = structuredClone(config.academicYears[0]);
+repeated.id = "other-year";
+config.academicYears.push(repeated);
+assert.equal(new Set(imageTerms(config).map(item => item.key)).size, 4);
+assert.deepEqual(imageTargets(config, "active", "missing"), []);
+assert.deepEqual(imageTerms({}), []);
+config.calendar.inactiveWeekdays = Object.fromEntries(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map(day => [day, {}]));
+assert.deepEqual(imageTargets(config, "active", terms[0].key).map(item => item.label), ["Vista semanal"]);
+config.calendar.inactiveWeekdays = {};
+assert.equal(imageTargets(config, "active", terms[0].key).length, 8);
+console.log("image-settings: targets, day/week/term routing, restore, advanced precedence and package roundtrip OK");

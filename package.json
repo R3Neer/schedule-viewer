@@ -1,0 +1,26 @@
+{
+  "name": "schedule-viewer",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/app-module-graph.test.mjs && node tests/settings-motion.test.mjs && node tests/settings-gestures.test.mjs && node tests/schedule-core.test.mjs && node tests/content-renderer.test.mjs && node tests/runtime-renderer.test.mjs && node tests/service-worker.test.mjs && node tests/app-updates.test.mjs && node tests/config-schema.test.mjs && node tests/device-ui.test.mjs && node tests/local-store.test.mjs && node tests/config-io.test.mjs && node tests/demo-labels.test.mjs && node tests/image-settings.test.mjs",
+    "test:e2e": "playwright test",
+    "capture:readme": "node tools/capture_readme.mjs"
+  },
+  "devDependencies": {
+    "@codemirror/lang-yaml": "^6.1.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.0.0",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.38.0",
+    "@liquidglassjs/core": "0.5.0",
+    "@playwright/test": "1.55.0",
+    "codemirror": "6.0.2",
+    "esbuild": "^0.25.0",
+    "fake-indexeddb": "^6.0.0",
+    "fflate": "0.8.2",
+    "@lezer/highlight": "^1.2.3",
+    "yaml": "^2.7.0"
+  }
+}

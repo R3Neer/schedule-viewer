@@ -1,0 +1,172 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install JavaScript test dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Enforce YAML as the only source configuration
+        run: |
+          test -f config/schedule.yaml
+          test ! -e config/schedules.json
+          test -z "$(find config -maxdepth 1 -type f -name '*.json' -print -quit)"
+
+      - name: Reject inherited private schedule identifiers
+        run: python tools/audit_public_tree.py
+
+      - name: Validate and compile YAML v3 demo
+        run: |
+          python tools/validate_config.py
+          python tools/compile_config.py --out test-output/schedule.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("test-output/schedule.json").read_text(encoding="utf-8"))
+          source = Path("config/schedule.yaml").read_text(encoding="utf-8")
+          assert data["version"] == 3
+          assert data["calendar"]["inactive"]["defaultImage"]["src"]
+          assert data["desktop"]["defaultView"] in data["views"]
+          print("compiled neutral demo contract: OK")
+          PY
+
+      - name: Test YAML compiler and negative validation contracts
+        run: python tests/config-v3.test.py
+
+      - name: Test calendar, persistence, package, renderer and Service Worker contracts
+        run: npm test
+
+      - name: Build exact static artifact
+        run: python tools/build.py --out dist
+
+      - name: Assert build artifact and lazy boundaries
+        run: |
+          test -f dist/config/schedule.json
+          test ! -e dist/config/schedule.yaml
+          test -f dist/favicon.svg
+          test -f dist/manifest.webmanifest
+          test -f dist/icons/apple-touch-icon.png
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          test ! -e dist/showcase
+          test -f dist/lazy/config-io.js
+          test -f dist/lazy/yaml-editor.js
+          test -f dist/lazy/apple-glass.js
+          test -f dist/lazy/apple-glass.css
+          test -f dist/apple-glass.js
+          test -f dist/app-updates.js
+          test -f dist/apple-liquid-glass.css
+          grep -q 'apple-liquid-glass.css?v=' dist/index.html
+          grep -q 'cm-editor' dist/lazy/yaml-editor.js
+          grep -q 'mountGlass' dist/lazy/apple-glass.js
+          grep -q 'lazy/apple-glass.js' dist/apple-glass.js
+          ! grep -qi 'liquidglassjs' dist/app.js
+          ! grep -qi 'liquidglassjs' dist/settings-ui.js
+          grep -q 'lazy/config-io.js' dist/service-worker.js
+          ! grep -q 'lazy/yaml-editor.js' dist/service-worker.js
+          ! grep -q 'lazy/apple-glass.js' dist/service-worker.js
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          config = json.loads(Path("dist/config/schedule.json").read_text(encoding="utf-8"))
+          import re
+          worker = Path("dist/service-worker.js").read_text(encoding="utf-8")
+          release = re.search(r'const RELEASE_ID = "([\w-]+)";', worker).group(1)
+          html = Path("dist/index.html").read_text(encoding="utf-8")
+          assert f'./releases/{release}/app.js?v={release}' in html
+          for filename in ("app.js", "settings-ui.js", "settings-motion.js", "settings-gestures.js", "app-updates.js", "styles.css", "lazy/config-io.js", "lazy/yaml-editor.js", "lazy/apple-glass.js", "lazy/apple-glass.css"):
+              assert (Path("dist/releases") / release / filename).read_bytes() == (Path("dist") / filename).read_bytes()
+          assert config["version"] == 3
+          assert len(config["views"]) >= 4
+          assert config["calendar"]["inactive"]["defaultImage"]["type"] == "image"
+          print("dist + lazy boundaries + Apple glass isolation: OK")
+          PY
+
+      - name: Verify generated WebP assets are real visual renders, not blank placeholders
+        run: python tests/generated-assets.test.py dist
+
+      - name: Verify README showcase provenance and deployment isolation
+        run: python tools/validate_showcase.py
+
+      - name: Install Chromium and WebKit for end-to-end tests
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Open built web app and run demanding Chromium E2E + offline tests
+        run: npm run test:e2e
+
+      - name: Require Liquid Glass, motion and touch contracts under WebKit
+        run: npx playwright test --config=playwright.apple.config.mjs
+
+      - name: Upload browser failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
+      - name: Configure Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Verify the published app includes compiled resources
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for file in index.html favicon.svg manifest.webmanifest icons/apple-touch-icon.png app-updates.js apple-liquid-glass.css lazy/apple-glass.js lazy/apple-glass.css lazy/yaml-editor.js lazy/config-io.js config/schedule.json releases/20260904-v4-18/app.js releases/20260904-v4-18/settings-ui.js releases/20260904-v4-18/settings-motion.js releases/20260904-v4-18/settings-gestures.js releases/20260904-v4-18/app-updates.js; do
+            curl --fail --silent --show-error --retry 4 --retry-delay 5 --retry-all-errors "${PAGE_URL%/}/$file" --output "$RUNNER_TEMP/$(basename "$file")"
+          done
+          grep -q '20260904-v4-18' "$RUNNER_TEMP/index.html"
+          grep -q 'cm-editor' "$RUNNER_TEMP/yaml-editor.js"
+          grep -q 'settings-menu-row' "$RUNNER_TEMP/apple-liquid-glass.css"

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F4F7FB">
+  <meta name="color-scheme" content="light dark">
+  <title>Schedule Viewer</title>
+  <link rel="stylesheet" href="./styles.css?v=20260903-v4-6">
+  <link rel="stylesheet" href="./settings-responsive.css?v=20260903-v4-6">
+  <link rel="stylesheet" href="./apple-liquid-glass.css?v=20260903-v4-6">
+  <style>
+    [hidden] { display: none !important; }
+
+    /* Last-resort mobile placement. This deliberately does not depend on
+       JavaScript device classification, so a real phone cannot strand the
+       settings control underneath system chrome. */
+    @media (max-width: 900px), (pointer: coarse), (hover: none) {
+      #settings-button {
+        top: auto !important;
+        right: max(14px, calc(env(safe-area-inset-right) + 12px)) !important;
+        bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px)) !important;
+      }
+
+      #demo-hint {
+        top: auto !important;
+        right: max(14px, calc(env(safe-area-inset-right) + 12px)) !important;
+        bottom: max(72px, calc(env(safe-area-inset-bottom) + 66px)) !important;
+      }
+
+      #settings-button.is-hidden,
+      #demo-hint.is-hidden {
+        transform: translateY(6px) scale(.96) !important;
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "./schedule-core.js": "./schedule-core.js?v=20260903-v4-6",
+        "./date-core.js": "./date-core.js?v=20260903-v4-6",
+        "./range-core.js": "./range-core.js?v=20260903-v4-6",
+        "./view-core.js": "./view-core.js?v=20260903-v4-6",
+        "./calendar-core.js": "./calendar-core.js?v=20260903-v4-6",
+        "./content-core.js": "./content-core.js?v=20260903-v4-6",
+        "./content-renderer.js": "./content-renderer.js?v=20260903-v4-6",
+        "./runtime-renderer.js": "./runtime-renderer.js?v=20260903-v4-6",
+        "./local-store.js": "./local-store.js?v=20260903-v4-6",
+        "./asset-resolver.js": "./asset-resolver.js?v=20260903-v4-6",
+        "./device-ui.js": "./device-ui.js?v=20260903-v4-6",
+        "./config-schema.js": "./config-schema.js?v=20260903-v4-6",
+        "./settings-ui.js": "./settings-ui.js?v=20260903-v4-6"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main class="schedule-shell">
+    <img id="schedule-image" class="schedule-image" alt="Schedule Viewer" decoding="async">
+    <p id="error-message" class="error-message" role="alert" hidden></p>
+  </main>
+
+  <button id="settings-button" class="settings-fab" type="button" aria-label="Abrir Ajustes">
+    <span aria-hidden="true">⚙</span>
+  </button>
+
+  <button id="demo-hint" class="demo-hint" type="button" hidden>
+    <span aria-hidden="true">⚙</span>
+    <span>Personaliza tu horario desde Ajustes</span>
+  </button>
+
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+    <div class="settings-sheet">
+      <header class="settings-header">
+        <button id="settings-back" class="settings-back" type="button" aria-label="Volver a Ajustes" hidden><span aria-hidden="true">‹</span> Ajustes</button>
+        <h2 id="settings-title" tabindex="-1">Ajustes</h2>
+        <button id="settings-close" class="icon-button" type="button" aria-label="Cerrar Ajustes"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </header>
+
+      <div class="settings-scroll">
+        <section id="settings-home-panel" data-settings-panel="home" class="settings-panel">
+          <nav class="settings-menu" aria-label="Secciones de Ajustes">
+            <button type="button" data-settings-tab="schedule" aria-label="Horario" class="settings-menu-row settings-menu-featured">
+              <span class="settings-menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2"/></svg></span>
+              <span><strong id="settings-app-name">Schedule Viewer</strong><small>Nombre, vistas y días inactivos</small></span><span class="settings-chevron" aria-hidden="true">›</span>
+            </button>
+          </nav>
+          <p class="settings-group-note">Personaliza cómo se muestra tu horario en este dispositivo.</p>
+          <nav class="settings-menu" aria-label="Más opciones">
+            <button type="button" data-settings-tab="images" class="settings-menu-row"><span>Imágenes</span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="backup" class="settings-menu-row"><span>Copia de seguridad</span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="advanced" class="settings-menu-row"><span>Avanzado</span><span class="settings-chevron" aria-hidden="true">›</span></button>
+          </nav>
+          <p class="settings-group-note">Exporta una copia para llevar tu configuración e imágenes a otro dispositivo.</p>
+          <p id="settings-source" class="settings-group-note">Configuración demo</p>
+        </section>
+        <section id="settings-schedule-panel" data-settings-panel="schedule" class="settings-panel" hidden>
+          <div id="view-settings"></div>
+          <div id="inactive-settings"></div>
+        </section>
+
+        <section id="settings-images-panel" data-settings-panel="images" class="settings-panel" hidden>
+          <div class="settings-card intro-card">
+            <h3>Imágenes</h3>
+            <p>La imagen por defecto siempre existe. Puedes sustituirla y añadir imágenes específicas para días, festivos o periodos.</p>
+          </div>
+          <div id="image-settings" class="image-settings"></div>
+        </section>
+
+        <section id="settings-backup-panel" data-settings-panel="backup" class="settings-panel" hidden>
+          <div class="settings-card">
+            <h3>Copia completa</h3>
+            <p>El archivo <code>.schedule</code> incluye el YAML y todas las imágenes guardadas en este dispositivo.</p>
+            <div class="button-stack">
+              <button id="backup-export" type="button" class="primary-button">Exportar configuración</button>
+              <button id="backup-import" type="button" class="secondary-button">Importar configuración</button>
+            </div>
+          </div>
+          <div class="settings-card danger-card">
+            <h3>Restablecer</h3>
+            <p>Vuelve a la demostración y elimina la configuración y los assets locales.</p>
+            <button id="backup-reset" type="button" class="danger-button">Restablecer configuración demo</button>
+          </div>
+        </section>
+
+        <section id="settings-advanced-panel" data-settings-panel="advanced" class="settings-panel" hidden>
+          <div class="settings-card">
+            <h3>YAML</h3>
+            <p>Edita o importa la configuración en YAML. Los cambios se comprueban antes de aplicarlos.</p>
+            <div class="button-row">
+              <button id="yaml-edit" type="button" class="primary-button">Editar YAML</button>
+              <button id="yaml-import" type="button" class="secondary-button">Importar solo YAML</button>
+              <button id="yaml-export" type="button" class="secondary-button">Exportar solo YAML</button>
+            </div>
+            <div id="yaml-editor-host" class="yaml-editor-host" hidden></div>
+            <div class="button-row yaml-actions">
+              <button id="yaml-validate" type="button" class="secondary-button" disabled>Validar</button>
+              <button id="yaml-apply" type="button" class="primary-button" disabled>Aplicar</button>
+            </div>
+            <p id="yaml-status" class="settings-status" aria-live="polite"></p>
+          </div>
+        </section>
+      </div>
+
+      <footer class="settings-footer" hidden>
+        <p id="settings-status" class="settings-status" role="status" aria-live="polite"></p>
+        <button id="settings-save" type="button" class="primary-button" disabled>Guardar cambios</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <script>
+    // Emergency reveal path independent of settings-ui.js device detection.
+    // Capturing both event families is intentional: WebKit PWAs have changed
+    // pointer reporting across versions, but a physical tap must always make
+    // the control reachable.
+    (() => {
+      const revealSettingsControl = () => {
+        document.getElementById("settings-button")?.classList.remove("is-hidden");
+      };
+      window.addEventListener("pointerdown", revealSettingsControl, { capture: true, passive: true });
+      window.addEventListener("touchstart", revealSettingsControl, { capture: true, passive: true });
+    })();
+
+    if ("serviceWorker" in navigator) {
+      const hadServiceWorkerController = Boolean(navigator.serviceWorker.controller);
+      let reloadingForServiceWorker = false;
+
+      if (hadServiceWorkerController) {
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (reloadingForServiceWorker) return;
+          reloadingForServiceWorker = true;
+          window.location.reload();
+        });
+      }
+
+      window.addEventListener("load", async () => {
+        try {
+          await navigator.serviceWorker.register("./service-worker.js", {
+            scope: "./",
+            updateViaCache: "none"
+          });
+          await navigator.serviceWorker.ready;
+          document.documentElement.dataset.offlineReady = "1";
+        } catch (error) {
+          console.error("No se pudo activar el modo offline.", error);
+          document.documentElement.dataset.offlineReady = "0";
+        }
+      });
+    }
+  </script>
+  <script type="module" src="./app.js?v=20260903-v4-6"></script>
+  <script type="module" src="./apple-glass.js?v=20260903-v4-6"></script>
+</body>
+</html>

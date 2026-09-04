@@ -1,0 +1,190 @@
+/* Responsive geometry for the settings sheet.
+   Kept separate from the material layer so layout fixes do not depend on which
+   Liquid Glass implementation is ultimately selected. */
+
+.danger-card p {
+  margin: 0 0 16px;
+}
+
+.danger-card .danger-button {
+  display: block;
+  width: 100%;
+  margin-top: 0;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  html[data-device-mode="touch"] .settings-dialog {
+    inset:
+      max(6px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+    width: auto;
+    height: auto;
+    max-height: none;
+    margin: 0;
+    border-radius: 22px;
+  }
+
+  html[data-device-mode="touch"] .settings-sheet {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    padding-bottom: 0;
+    border-radius: 22px;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .settings-header {
+    min-height: 50px;
+    padding:
+      7px
+      max(12px, calc(env(safe-area-inset-right) + 8px))
+      7px
+      max(12px, calc(env(safe-area-inset-left) + 8px));
+    gap: 10px;
+  }
+
+  .settings-source {
+    display: none;
+  }
+
+  .settings-header h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  .icon-button {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    font-size: 24px;
+  }
+
+  .settings-tabs {
+    min-height: 42px;
+    gap: 2px;
+    padding:
+      4px
+      max(10px, calc(env(safe-area-inset-right) + 6px))
+      4px
+      max(10px, calc(env(safe-area-inset-left) + 6px));
+  }
+
+  .settings-tabs button {
+    padding: 6px 9px;
+    font-size: 13px;
+    line-height: 1.15;
+  }
+
+  .settings-scroll {
+    min-height: 0;
+    padding:
+      8px
+      max(10px, calc(env(safe-area-inset-right) + 6px))
+      8px
+      max(10px, calc(env(safe-area-inset-left) + 6px));
+  }
+
+  .settings-panel {
+    gap: 8px;
+  }
+
+  .settings-card {
+    padding: 11px 12px;
+    border-radius: 14px;
+  }
+
+  .settings-card h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+  }
+
+  .settings-card p {
+    margin: 0 0 10px;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .danger-card p {
+    margin-bottom: 12px;
+  }
+
+  .settings-footer {
+    min-height: 46px;
+    padding:
+      6px
+      max(10px, calc(env(safe-area-inset-right) + 6px))
+      max(6px, env(safe-area-inset-bottom))
+      max(10px, calc(env(safe-area-inset-left) + 6px));
+    gap: 8px;
+  }
+
+  .settings-footer .primary-button,
+  .settings-footer .secondary-button,
+  .settings-footer .danger-button {
+    min-height: 34px;
+    padding: 6px 11px;
+    border-radius: 11px;
+    font-size: 13px;
+  }
+
+  .settings-status {
+    font-size: 11px;
+  }
+
+  .image-settings {
+    gap: 7px;
+  }
+
+  .image-setting {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 13px;
+  }
+
+  .image-preview {
+    width: 44px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .image-setting-copy {
+    font-size: 12px;
+  }
+
+  .image-setting-copy small {
+    font-size: 10px;
+  }
+
+  .image-setting-actions {
+    grid-column: auto;
+  }
+
+  .image-setting-actions .secondary-button,
+  .image-setting-actions .text-button {
+    min-height: 32px;
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+
+  .stack-field {
+    margin-bottom: 8px;
+  }
+
+  .range-control {
+    min-height: 40px;
+    padding: 5px 0;
+  }
+
+  .settings-text,
+  .settings-select,
+  .settings-number,
+  .settings-date {
+    min-height: 34px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+}
