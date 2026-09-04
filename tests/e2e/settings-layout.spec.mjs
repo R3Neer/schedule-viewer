@@ -49,6 +49,31 @@ test.describe("settings responsive geometry", () => {
     for (const metric of metrics.slice(1)) expect(metric.spaceAbove).toBeGreaterThanOrEqual(24);
   });
 
+  test("image settings never create or retain horizontal scrolling", async ({ page }) => {
+    await page.setViewportSize({ width: 402, height: 874 });
+    await openSettings(page, "Imágenes");
+
+    const geometry = await page.locator(".settings-scroll").evaluate(async (scroll) => {
+      scroll.scrollLeft = 120;
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const content = scroll.querySelector("#image-settings");
+      const rows = [...scroll.querySelectorAll(".image-settings-group, .image-setting, .image-setting-main")];
+      return {
+        scrollLeft: scroll.scrollLeft,
+        scrollWidth: scroll.scrollWidth,
+        clientWidth: scroll.clientWidth,
+        contentWidth: content.getBoundingClientRect().width,
+        availableWidth: scroll.getBoundingClientRect().width - parseFloat(getComputedStyle(scroll).paddingLeft) - parseFloat(getComputedStyle(scroll).paddingRight),
+        rowsFit: rows.every(node => node.getBoundingClientRect().width <= content.getBoundingClientRect().width + 1)
+      };
+    });
+
+    expect(geometry.scrollLeft).toBe(0);
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+    expect(geometry.contentWidth).toBeLessThanOrEqual(geometry.availableWidth + 1);
+    expect(geometry.rowsFit).toBe(true);
+  });
+
   test("landscape reserves useful content height and keeps close/footer inside the viewport", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 874, height: 402 });
     await openSettings(page, "Imágenes");

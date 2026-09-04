@@ -81,6 +81,46 @@ test("wrong-direction and content vertical gestures do not navigate or dismiss",
   await expect(page.locator("#settings-dialog")).toBeVisible();
 });
 
+test("a short settings panel cannot pass vertical scrolling to the background", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP touch input is a Chromium-only native-stream check");
+  await loadSettings(page, "home");
+  await expect(page.locator("html")).toHaveClass(/settings-modal-open/);
+
+  const scroll = page.locator(".settings-scroll");
+  const box = await scroll.boundingBox();
+  const before = await page.evaluate(() => ({
+    scrollY,
+    image: document.querySelector("#schedule-image").getBoundingClientRect().toJSON(),
+    bodyPosition: getComputedStyle(document.body).position
+  }));
+  expect(before.bodyPosition).toBe("fixed");
+
+  const session = await page.context().newCDPSession(page);
+  const x = box.x + box.width / 2;
+  const startY = box.y + Math.min(box.height / 2, 220);
+  await session.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y: startY, radiusX: 4, radiusY: 4, force: 1, id: 1 }]
+  });
+  for (let step = 1; step <= 8; step++) {
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x, y: startY - step * 24, radiusX: 4, radiusY: 4, force: 1, id: 1 }]
+    });
+  }
+  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(100);
+
+  const after = await page.evaluate(() => ({
+    scrollY,
+    image: document.querySelector("#schedule-image").getBoundingClientRect().toJSON()
+  }));
+  expect(after.scrollY).toBe(before.scrollY);
+  expect(after.image.x).toBeCloseTo(before.image.x, 1);
+  expect(after.image.y).toBeCloseTo(before.image.y, 1);
+  await expect(page.locator("#settings-dialog")).toHaveAttribute("data-motion-state", "open");
+});
+
 test("header swipe down cancels when short, closes when committed and respects dirty confirmation", async ({ page }) => {
   await loadSettings(page, "periods");
   const title = await page.locator("#settings-title").boundingBox();

@@ -214,7 +214,11 @@ export function initSettingsMotion({ dialog, deviceMode = "desktop", onStateChan
   async function open(panel = "home") {
     if (dialog.open && state === "open") return panel === currentPanel ? true : showPanel(panel);
     if (dialog.open && state === "navigating") return showPanel(panel);
-    if (!dialog.open) { setOnlyPanel(panel); dialog.showModal(); }
+    if (!dialog.open) {
+      setOnlyPanel(panel);
+      document.documentElement.classList.add("settings-modal-open");
+      dialog.showModal();
+    }
     setState("opening");
     const completed = await animate({ channel: "sheet", from: sheetProgress, to: 1, milliseconds: deviceMode === "touch" ? 360 : 220, render: renderSheet, complete: () => setState("open") });
     if (completed) title.focus({ preventScroll: true });
@@ -228,6 +232,7 @@ export function initSettingsMotion({ dialog, deviceMode = "desktop", onStateChan
     if (completed) {
       dialog.close(); sheet.style.removeProperty("transform"); sheet.style.removeProperty("opacity");
       dialog.style.removeProperty("--settings-backdrop-progress"); setState("closed");
+      document.documentElement.classList.remove("settings-modal-open");
     }
     return completed;
   }
@@ -242,5 +247,5 @@ export function initSettingsMotion({ dialog, deviceMode = "desktop", onStateChan
   return { open, close, showPanel, beginBack, updateBack, endBack, beginDismiss, updateDismiss, cancelDismiss, settle,
     get state() { return state; }, get panel() { return currentPanel; }, get canGoBack() { return Boolean(PARENTS[currentPanel]); },
     get transitioning() { return !["closed", "open"].includes(state); },
-    dispose() { settle(); reduced.removeEventListener("change", onReducedMotion); document.removeEventListener("visibilitychange", onVisibility); window.removeEventListener("resize", onResize); } };
+    dispose() { settle(); document.documentElement.classList.remove("settings-modal-open"); reduced.removeEventListener("change", onReducedMotion); document.removeEventListener("visibilitychange", onVisibility); window.removeEventListener("resize", onResize); } };
 }
