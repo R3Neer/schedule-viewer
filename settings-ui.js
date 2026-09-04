@@ -9,6 +9,7 @@ const DAY_LABELS = { monday: "Lunes", tuesday: "Martes", wednesday: "Miércoles"
 const UNIT_LABELS = { day: "Día", week: "Semana", month: "Mes" };
 const IMAGE_LIMIT = 25 * 1024 * 1024;
 const IMAGE_ACCEPT = ".png,.jpg,.jpeg,.webp,.avif,.gif,image/png,image/jpeg,image/webp,image/avif,image/gif";
+const TOUCH_CONTROL_HIDE_DELAY = 4200;
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -140,7 +141,35 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
   let savedYaml = null;
   let pendingFocusRestore = null;
   let motion;
+  let controlHideTimer = null;
+  let hintDismissed = false;
   const previewUrls = new Set();
+
+  const clearControlHideTimer = () => {
+    window.clearTimeout(controlHideTimer);
+    controlHideTimer = null;
+  };
+  const hideFloatingControls = () => {
+    controlHideTimer = null;
+    if (dialog.open || button === document.activeElement || hint === document.activeElement) return;
+    button.classList.add("is-hidden");
+    hint.classList.add("is-hidden");
+  };
+  const scheduleFloatingControlsHide = () => {
+    clearControlHideTimer();
+    if (deviceMode !== "touch" || dialog.open) return;
+    controlHideTimer = window.setTimeout(hideFloatingControls, TOUCH_CONTROL_HIDE_DELAY);
+  };
+  const revealFloatingControls = () => {
+    if (dialog.open) return;
+    button.classList.remove("is-hidden");
+    if (!hint.hidden && !hintDismissed) hint.classList.remove("is-hidden");
+    scheduleFloatingControlsHide();
+  };
+  const dismissHint = () => {
+    hintDismissed = true;
+    hint.classList.add("is-hidden");
+  };
 
   const clearPreviews = () => { for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); };
   const setStatus = (message = "", kind = "info") => {
@@ -225,7 +254,7 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
       });
       weekdays.append(el("label", { class: "checkbox-row" }, el("span", { text: DAY_LABELS[day] }), checkbox));
     }
-    const exceptions = el("section", { class: "settings-card calendar-editor" }, el("h3", { text: "Excepciones" }));
+    const exceptions = el("section", { class: "calendar-editor" }, el("h3", { class: "settings-section-heading", text: "Excepciones" }));
     workingConfig.calendar.exceptions.forEach((entry, index) => {
       const date = el("input", { class: "settings-date", type: "date", value: entry.date });
       const name = el("input", { class: "settings-text", value: entry.name });
@@ -235,10 +264,10 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
       name.oninput = () => { entry.name = name.value; markDirty(); };
       state.onchange = () => { entry.state = state.value; if (entry.state === "active") entry.images = {}; markDirty(); renderCalendar(); renderImages(); };
       kind.onchange = () => { entry.kind = kind.value; markDirty(); };
-      exceptions.append(el("div", { class: "calendar-item" }, field("Fecha", date), field("Nombre", name), field("Estado", state), field("Categoría", kind), el("button", { type: "button", class: "danger-button inline-danger", text: "Eliminar", onclick: () => { workingConfig.calendar.exceptions.splice(index, 1); markDirty(); renderCalendar(); renderImages(); } })));
+      exceptions.append(el("div", { class: "settings-card calendar-item" }, field("Fecha", date), field("Nombre", name), field("Estado", state), field("Categoría", kind), el("button", { type: "button", class: "danger-button inline-danger", text: "Eliminar", onclick: () => { workingConfig.calendar.exceptions.splice(index, 1); markDirty(); renderCalendar(); renderImages(); } })));
     });
     exceptions.append(el("button", { type: "button", class: "settings-add-row", text: "+  Añadir excepción", onclick: () => { workingConfig.calendar.exceptions.push({ id: uniqueId("exception"), date: workingConfig.periods[0].start, name: "Nueva excepción", state: "inactive", kind: "other", images: {} }); markDirty(); renderCalendar(); } }));
-    const intervals = el("section", { class: "settings-card calendar-editor" }, el("h3", { text: "Periodos inactivos" }));
+    const intervals = el("section", { class: "calendar-editor" }, el("h3", { class: "settings-section-heading", text: "Periodos inactivos" }));
     workingConfig.calendar.inactivePeriods.forEach((entry, index) => {
       const name = el("input", { class: "settings-text", value: entry.name });
       const start = el("input", { class: "settings-date", type: "date", value: entry.start });
@@ -248,7 +277,7 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
       start.onchange = () => { entry.start = start.value; markDirty(); renderImages(); };
       end.onchange = () => { entry.end = end.value; markDirty(); renderImages(); };
       kind.onchange = () => { entry.kind = kind.value; markDirty(); };
-      intervals.append(el("div", { class: "calendar-item" }, field("Nombre", name), field("Inicio", start), field("Fin", end), field("Categoría", kind), el("button", { type: "button", class: "danger-button inline-danger", text: "Eliminar", onclick: () => { workingConfig.calendar.inactivePeriods.splice(index, 1); markDirty(); renderCalendar(); renderImages(); } })));
+      intervals.append(el("div", { class: "settings-card calendar-item" }, field("Nombre", name), field("Inicio", start), field("Fin", end), field("Categoría", kind), el("button", { type: "button", class: "danger-button inline-danger", text: "Eliminar", onclick: () => { workingConfig.calendar.inactivePeriods.splice(index, 1); markDirty(); renderCalendar(); renderImages(); } })));
     });
     intervals.append(el("button", { type: "button", class: "settings-add-row", text: "+  Añadir periodo inactivo", onclick: () => { const first = workingConfig.periods[0]; workingConfig.calendar.inactivePeriods.push({ id: uniqueId("inactive"), name: "Nuevo periodo inactivo", start: first.start, end: first.start, kind: "other", images: {} }); markDirty(); renderCalendar(); } }));
     calendarHost.append(weekdays, exceptions, intervals);
@@ -328,7 +357,11 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
   });
 
   const syncSource = () => {
-    const state = getState(); sourceBadge.textContent = state.source === "demo" ? "Configuración demo" : "Configuración local"; hint.hidden = state.source !== "demo"; renderLegacyWarning();
+    const state = getState();
+    sourceBadge.textContent = state.source === "demo" ? "Configuración demo" : "Configuración local";
+    hint.hidden = state.source !== "demo";
+    if (hint.hidden || hintDismissed) hint.classList.add("is-hidden");
+    renderLegacyWarning();
   };
   const refreshDraft = () => { workingConfig = clone(getState().config); pendingAssets = new Map(); dirty = false; saveButton.disabled = true; setStatus(); renderAll(); };
 
@@ -336,7 +369,7 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
   const openSettings = async (panel = "home", { refresh } = {}) => {
     const shouldRefresh = refresh ?? (!dialog.open && !openingSettings);
     if ((dialog.open || openingSettings) && !shouldRefresh) return panel === dialog.dataset.panel ? motion.open(panel) : motion.showPanel(panel);
-    openingSettings = true; refreshDraft();
+    openingSettings = true; clearControlHideTimer(); dismissHint(); refreshDraft();
     try { await motion.showPanel(panel, { instant: true }); await motion.open(panel); button.classList.remove("is-hidden"); }
     finally { openingSettings = false; }
   };
@@ -346,11 +379,12 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
     if ((dirty || yamlDirty) && !confirm("Hay cambios sin guardar. ¿Descartarlos y cerrar Ajustes?")) { if (motion.state === "dismissing") await motion.cancelDismiss({ velocity: -velocity }); return false; }
     if (!await motion.close({ velocity: dirty || yamlDirty ? 0 : velocity })) return false;
     dirty = false; if (yamlEditor) { yamlEditor.destroy(); yamlEditor = null; yamlHost.replaceChildren(); document.documentElement.dataset.yamlEditorLoaded = "0"; }
-    clearPreviews(); onUpdateSafetyChange(); return true;
+    clearPreviews(); revealFloatingControls(); onUpdateSafetyChange(); return true;
   };
   initSettingsGestures({ dialog, motion, deviceMode, isBusy: () => pendingTasks > 0, onDismissRequested: closeSettings });
 
   button.onclick = () => void openSettings();
+  hint.onclick = () => void openSettings();
   document.querySelector("#settings-close").onclick = () => void closeSettings();
   document.querySelector("#settings-back").onclick = () => {
     const previous = dialog.dataset.panel; const parent = previous === "yaml" ? "advanced" : "home";
@@ -360,6 +394,19 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
   saveButton.onclick = () => saveWorking();
   dialog.addEventListener("click", event => { if (event.target === dialog) void closeSettings(); });
   dialog.addEventListener("cancel", event => { event.preventDefault(); void closeSettings(); });
+
+  const onDocumentPress = event => {
+    if (!(event.target instanceof Node)) return;
+    if (button.contains(event.target) || hint.contains(event.target) || dialog.contains(event.target)) return;
+    if (deviceMode === "touch") revealFloatingControls();
+    else dismissHint();
+  };
+  document.addEventListener("pointerdown", onDocumentPress, { capture: true, passive: true });
+  document.addEventListener("touchstart", onDocumentPress, { capture: true, passive: true });
+  button.addEventListener("focus", clearControlHideTimer);
+  hint.addEventListener("focus", clearControlHideTimer);
+  button.addEventListener("blur", scheduleFloatingControlsHide);
+  hint.addEventListener("blur", scheduleFloatingControlsHide);
 
   document.querySelector("#backup-export").onclick = runTask(async () => { const io = await loadIo(); const state = getState(); downloadBlob(await io.exportSchedulePackage({ config: state.config, assets: await listAssets() }), `${safeFileName(state.config.periods?.[0]?.name)}.schedule`); setStatus("Copia exportada.", "success"); });
   document.querySelector("#backup-import").onclick = runTask(async () => { const file = await requestFile(".schedule,application/zip,application/vnd.schedule-viewer+zip"); if (!file) return; const io = await loadIo(); const imported = await io.inspectSchedulePackage(file); await applyLocalConfig(imported.config, { yaml: imported.yaml, assets: imported.assets }); setStatus("Configuración restaurada.", "success"); syncSource(); await openSettings("backup", { refresh: true }); });
@@ -376,7 +423,7 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
   yamlApply.onclick = runTask(async () => { if (!yamlEditor) return; const result = yamlEditor.validate(); if (!result.valid) return; pendingAssets = new Map(); if (!await resolveMissing(result.config, yamlStatus)) return; await applyLocalConfig(result.config, { yaml: yamlEditor.getValue(), assets: [...pendingAssets.values()] }); refreshDraft(); savedYaml = yamlEditor.getValue(); yamlStatus.textContent = "YAML aplicado y guardado."; });
 
   document.addEventListener("keydown", event => { if (event.key === "," && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) { event.preventDefault(); void openSettings(); } });
-  if (deviceMode === "touch") { window.addEventListener("pointerdown", () => button.classList.remove("is-hidden"), { passive: true }); } else button.classList.remove("is-hidden");
   syncSource();
+  revealFloatingControls();
   return { openSettings, closeSettings, syncState: syncSource, isOpen: () => dialog.open, motion, isSafeToReload: () => !openingSettings && !dialog.open && pendingTasks === 0 && !motion.transitioning };
 }

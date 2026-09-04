@@ -95,9 +95,9 @@ html[data-ui-theme="apple"] .range-detail:empty { display: none; }
 html[data-ui-theme="apple"] .inline-field { display: flex; justify-content: space-between; width: 100%; min-height: 44px; font-size: 15px; }
 html[data-ui-theme="apple"] .checkbox-row, html[data-ui-theme="apple"] .switch-row { display: flex; align-items: center; justify-content: space-between; min-height: 50px; padding: 8px 0; font-weight: 400; }
 html[data-ui-theme="apple"] .checkbox-row + .checkbox-row { border-top: 1px solid var(--line); }
-html[data-ui-theme="apple"] .checkbox-row input { order: 2; appearance: none; width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 50%; background: transparent; position: relative; }
-html[data-ui-theme="apple"] .checkbox-row input:checked { background: #007aff; border-color: #007aff; }
-html[data-ui-theme="apple"] .checkbox-row input:checked::after { content: ""; position: absolute; left: 7px; top: 3px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+html[data-ui-theme="apple"] .checkbox-row input { width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 50%; background-color: transparent; }
+html[data-ui-theme="apple"] .checkbox-row input:checked { background-color: #007aff; border-color: #007aff; }
+html[data-ui-theme="apple"] .switch-row input:checked { background-color: #34c759; border-color: #34c759; }
 html[data-ui-theme="apple"] .settings-footer { border: 0; background: rgba(242,241,246,.94); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 html[data-ui-theme="apple"] .primary-button, html[data-ui-theme="apple"] .secondary-button, html[data-ui-theme="apple"] .danger-button { min-height: 44px; font-size: 16px; font-weight: 500; border: 0; border-radius: 22px; box-shadow: none; }
 html[data-ui-theme="apple"] .primary-button { background: var(--accent); color: #fff; }

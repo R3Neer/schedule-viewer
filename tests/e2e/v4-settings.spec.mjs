@@ -42,6 +42,13 @@ test("las seis secciones mantienen orden, jerarquía y áreas táctiles", async 
 test("periodos editables conservan borrador y rechazan solapamientos", async ({ page }) => {
   await load(page);
   await panel(page, "Periodos");
+  const initialCards = page.locator(".period-card");
+  const initialAdd = page.getByRole("button", { name: "Añadir periodo" });
+  const [firstCard, secondCard, addRow] = await Promise.all([
+    initialCards.nth(0).boundingBox(), initialCards.nth(1).boundingBox(), initialAdd.boundingBox()
+  ]);
+  expect(secondCard.y - firstCard.y - firstCard.height).toBeGreaterThanOrEqual(16);
+  expect(addRow.y - secondCard.y - secondCard.height).toBeGreaterThanOrEqual(16);
   const name = page.getByLabel("Nombre del periodo").first();
   await name.fill("Proyecto editorial");
   await expect(page.locator("#settings-save")).toBeEnabled();
@@ -73,6 +80,11 @@ test("calendario añade excepciones e intervalos y presenta categorías", async 
   await page.getByRole("button", { name: "Añadir excepción" }).click();
   await page.getByRole("button", { name: "Añadir periodo inactivo" }).click();
   await expect(page.locator(".calendar-item")).toHaveCount(6);
+  const inactiveCards = page.locator(".calendar-editor").last().locator(".calendar-item");
+  const [firstInactive, secondInactive] = await Promise.all([
+    inactiveCards.nth(0).boundingBox(), inactiveCards.nth(1).boundingBox()
+  ]);
+  expect(secondInactive.y - firstInactive.y - firstInactive.height).toBeGreaterThanOrEqual(16);
   await expect(page.locator('select[aria-label="Categoría"]').last()).toBeVisible();
 });
 

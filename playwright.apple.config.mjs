@@ -5,7 +5,7 @@ const externalServer = process.env.SCHEDULE_VIEWER_EXTERNAL_SERVER === "1";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testMatch: ["apple-glass.spec.mjs", "settings-motion.spec.mjs", "settings-gestures.spec.mjs"],
+  testMatch: ["apple-glass.spec.mjs", "settings-controls.spec.mjs", "settings-motion.spec.mjs", "settings-gestures.spec.mjs"],
   timeout: 35_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,

@@ -76,10 +76,26 @@ function effectiveManualView(viewport) {
 function useFallback() {
   if (currentRendered?.fallbackSrc && image.dataset.fallback !== "1") {
     image.dataset.fallback = "1";
+    document.documentElement.dataset.imageRecovery = "demo";
     image.src = currentRendered.fallbackSrc;
     return;
   }
   showError(new Error("No se pudo cargar ni regenerar el contenido seleccionado."));
+}
+
+function demoFallbackFor(date, viewport) {
+  if (!demoConfig) return null;
+  const selection = selectScheduleContent(demoConfig, {
+    date,
+    viewport,
+    manualViewId: desktopContextMatches(demoConfig, viewport) ? manualViewId : null
+  });
+  return renderSelectionContent(demoConfig, selection, {
+    baseURI: document.baseURI,
+    viewportWidth: viewport.width,
+    viewportHeight: viewport.height,
+    phoneArtwork: false
+  });
 }
 
 async function materializeSelection(selection, viewport) {
@@ -123,7 +139,16 @@ async function render() {
     viewport,
     manualViewId: effectiveManualView(viewport)
   });
-  const result = await materializeSelection(selected, viewport);
+  let result;
+  try {
+    result = await materializeSelection(selected, viewport);
+  } catch (error) {
+    const fallback = configSource === "local" ? demoFallbackFor(date, viewport) : null;
+    if (!fallback) throw error;
+    console.warn("La imagen local configurada ya no está disponible; se usa la demostración sin modificar los ajustes.", error);
+    result = { rendered: { ...fallback, cacheKey: `recovered:${fallback.cacheKey}` }, phoneArtwork: false, selection: selected, recovered: true };
+    document.documentElement.dataset.imageRecovery = "demo";
+  }
   if (generation !== renderGeneration) {
     releaseResolvedSource(result.rendered);
     return;
@@ -131,6 +156,10 @@ async function render() {
 
   const selection = result.selection;
   const rendered = result.rendered;
+  if (configSource === "local" && !rendered.fallbackSrc) {
+    const fallback = demoFallbackFor(date, viewport);
+    if (fallback?.src && fallback.src !== rendered.src) rendered.fallbackSrc = fallback.src;
+  }
   currentSelection = selection;
   document.documentElement.dataset.view = selection.kind;
   document.documentElement.dataset.viewProfile = selection.viewId;
@@ -154,6 +183,7 @@ async function render() {
   if (currentKey !== rendered.cacheKey || image.src !== rendered.src) {
     currentKey = rendered.cacheKey;
     delete image.dataset.fallback;
+    if (!result.recovered) delete document.documentElement.dataset.imageRecovery;
     image.src = rendered.src;
   }
 }

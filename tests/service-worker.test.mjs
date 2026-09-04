@@ -92,7 +92,8 @@ assert.deepEqual(deletedCaches.sort(), [
   "schedule-viewer-offline-20260903-v4-8",
   "schedule-viewer-offline-20260904-v4-16",
   "schedule-viewer-offline-20260904-v4-17",
-  "schedule-viewer-offline-20260904-v4-18"
+  "schedule-viewer-offline-20260904-v4-18",
+  "schedule-viewer-offline-20260904-v5-0"
 ].sort());
 assert.equal(claimed, true);
 assert.equal(context.isMigrationCache("schedule-viewer-offline-v3"), true);
@@ -100,7 +101,7 @@ assert.equal(context.isMigrationCache("schedule-viewer-offline-v3-content"), tru
 assert.equal(context.isMigrationCache("schedule-viewer-offline-v4"), false);
 
 assert.match(code, /config\/schedule\.json/);
-assert.equal(vm.runInContext("CACHE_NAME", context), "schedule-viewer-offline-20260904-v5-0");
+assert.equal(vm.runInContext("CACHE_NAME", context), "schedule-viewer-offline-20260904-v5-1");
 assert.match(code, /MIGRATION_CACHE_PREFIX/);
 assert.match(code, /discoverImageDescriptors/);
 assert.match(code, /ignoreSearch/);
