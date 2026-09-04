@@ -10,9 +10,9 @@
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=20260904-v4-18">
-  <link rel="stylesheet" href="./settings-responsive.css?v=20260904-v4-18">
-  <link rel="stylesheet" href="./apple-liquid-glass.css?v=20260904-v4-18">
+  <link rel="stylesheet" href="./styles.css?v=20260904-v5-0">
+  <link rel="stylesheet" href="./settings-responsive.css?v=20260904-v5-0">
+  <link rel="stylesheet" href="./apple-liquid-glass.css?v=20260904-v5-0">
   <style>
     [hidden] { display: none !important; }
 
@@ -41,20 +41,20 @@
   <script type="importmap">
     {
       "imports": {
-        "./schedule-core.js": "./schedule-core.js?v=20260904-v4-18",
-        "./date-core.js": "./date-core.js?v=20260904-v4-18",
-        "./range-core.js": "./range-core.js?v=20260904-v4-18",
-        "./view-core.js": "./view-core.js?v=20260904-v4-18",
-        "./calendar-core.js": "./calendar-core.js?v=20260904-v4-18",
-        "./content-core.js": "./content-core.js?v=20260904-v4-18",
-        "./content-renderer.js": "./content-renderer.js?v=20260904-v4-18",
-        "./runtime-renderer.js": "./runtime-renderer.js?v=20260904-v4-18",
-        "./local-store.js": "./local-store.js?v=20260904-v4-18",
-        "./asset-resolver.js": "./asset-resolver.js?v=20260904-v4-18",
-        "./device-ui.js": "./device-ui.js?v=20260904-v4-18",
-        "./config-schema.js": "./config-schema.js?v=20260904-v4-18",
-        "./settings-ui.js": "./settings-ui.js?v=20260904-v4-18",
-        "./app-updates.js": "./app-updates.js?v=20260904-v4-18"
+        "./schedule-core.js": "./schedule-core.js?v=20260904-v5-0",
+        "./date-core.js": "./date-core.js?v=20260904-v5-0",
+        "./range-core.js": "./range-core.js?v=20260904-v5-0",
+        "./view-core.js": "./view-core.js?v=20260904-v5-0",
+        "./calendar-core.js": "./calendar-core.js?v=20260904-v5-0",
+        "./content-core.js": "./content-core.js?v=20260904-v5-0",
+        "./content-renderer.js": "./content-renderer.js?v=20260904-v5-0",
+        "./runtime-renderer.js": "./runtime-renderer.js?v=20260904-v5-0",
+        "./local-store.js": "./local-store.js?v=20260904-v5-0",
+        "./asset-resolver.js": "./asset-resolver.js?v=20260904-v5-0",
+        "./device-ui.js": "./device-ui.js?v=20260904-v5-0",
+        "./config-schema.js": "./config-schema.js?v=20260904-v5-0",
+        "./settings-ui.js": "./settings-ui.js?v=20260904-v5-0",
+        "./app-updates.js": "./app-updates.js?v=20260904-v5-0"
       }
     }
   </script>
@@ -72,7 +72,7 @@
 
   <button id="demo-hint" class="demo-hint" type="button" hidden>
     <svg class="settings-gear-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.73v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.73l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></svg>
-    <span>Personaliza tu horario desde Ajustes</span>
+    <span>Personaliza tus periodos desde Ajustes</span>
   </button>
 
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
@@ -86,25 +86,28 @@
       <div class="settings-scroll">
         <p class="app-update-notice" data-app-update-notice role="status" hidden></p>
         <section id="settings-home-panel" data-settings-panel="home" class="settings-panel">
-          <nav class="settings-menu" aria-label="Secciones de Ajustes">
-            <button type="button" data-settings-tab="schedule" aria-label="Horario" class="settings-menu-row settings-menu-featured">
-              <span class="settings-menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2"/></svg></span>
-              <span><strong id="settings-app-name">Schedule Viewer</strong><small>Nombre, vistas y días inactivos</small></span><span class="settings-chevron" aria-hidden="true">›</span>
-            </button>
+          <div id="legacy-config-warning" class="settings-card compatibility-warning" role="alert" hidden></div>
+          <nav class="settings-menu" aria-label="Configuración">
+            <button type="button" data-settings-tab="periods" class="settings-menu-row" aria-label="Periodos"><span><strong>Periodos</strong><small>Intervalos y nombres</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="calendar" class="settings-menu-row" aria-label="Calendario"><span><strong>Calendario</strong><small>Días activos y excepciones</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="presentation" class="settings-menu-row" aria-label="Presentación"><span><strong>Presentación</strong><small>Vertical dinámica y horizontal fija</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="images" class="settings-menu-row" aria-label="Imágenes"><span><strong>Imágenes</strong><small>Contenido activo e inactivo</small></span><span class="settings-chevron" aria-hidden="true">›</span></button>
           </nav>
-          <p class="settings-group-note">Personaliza cómo se muestra tu horario en este dispositivo.</p>
-          <nav class="settings-menu" aria-label="Más opciones">
-            <button type="button" data-settings-tab="images" class="settings-menu-row"><span>Imágenes</span><span class="settings-chevron" aria-hidden="true">›</span></button>
-            <button type="button" data-settings-tab="backup" class="settings-menu-row"><span>Copia de seguridad</span><span class="settings-chevron" aria-hidden="true">›</span></button>
-            <button type="button" data-settings-tab="advanced" class="settings-menu-row"><span>Avanzado</span><span class="settings-chevron" aria-hidden="true">›</span></button>
+          <nav class="settings-menu" aria-label="Datos">
+            <button type="button" data-settings-tab="backup" class="settings-menu-row" aria-label="Copia de seguridad"><span>Copia de seguridad</span><span class="settings-chevron" aria-hidden="true">›</span></button>
+            <button type="button" data-settings-tab="advanced" class="settings-menu-row" aria-label="Avanzado"><span>Avanzado</span><span class="settings-chevron" aria-hidden="true">›</span></button>
           </nav>
-          <p class="settings-group-note">Exporta una copia para llevar tu configuración e imágenes a otro dispositivo.</p>
           <p id="settings-source" class="settings-group-note">Configuración demo</p>
-          <p class="settings-group-note">Versión <span id="app-version">20260904-v4-18</span></p>
+          <p class="settings-group-note">Versión <span id="app-version">20260904-v5-0</span></p>
         </section>
-        <section id="settings-schedule-panel" data-settings-panel="schedule" class="settings-panel" hidden>
-          <div id="view-settings"></div>
-          <div id="inactive-settings"></div>
+        <section id="settings-periods-panel" data-settings-panel="periods" class="settings-panel" hidden>
+          <div id="period-settings"></div>
+        </section>
+        <section id="settings-calendar-panel" data-settings-panel="calendar" class="settings-panel" hidden>
+          <div id="calendar-settings"></div>
+        </section>
+        <section id="settings-presentation-panel" data-settings-panel="presentation" class="settings-panel" hidden>
+          <div id="presentation-settings"></div>
         </section>
 
         <section id="settings-images-panel" data-settings-panel="images" class="settings-panel" hidden>
@@ -117,9 +120,9 @@
           <div class="settings-card">
             <h3>Copia completa</h3>
             <p>El archivo <code>.schedule</code> incluye el YAML y todas las imágenes guardadas en este dispositivo.</p>
-            <div class="button-stack">
-              <button id="backup-export" type="button" class="primary-button">Exportar configuración</button>
-              <button id="backup-import" type="button" class="secondary-button">Importar configuración</button>
+            <div class="backup-actions" role="group" aria-label="Acciones de copia de seguridad">
+              <button id="backup-import" type="button" class="backup-action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M4 14v6h16v-6"/></svg><span>Importar</span></button>
+              <button id="backup-export" type="button" class="backup-action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V3m-4 4 4-4 4 4M4 14v6h16v-6"/></svg><span>Exportar</span></button>
             </div>
           </div>
           <div class="settings-card danger-card">
@@ -175,7 +178,7 @@
     })();
 
   </script>
-  <script type="module" src="./app.js?v=20260904-v4-18"></script>
-  <script type="module" src="./apple-glass.js?v=20260904-v4-18"></script>
+  <script type="module" src="./app.js?v=20260904-v5-0"></script>
+  <script type="module" src="./apple-glass.js?v=20260904-v5-0"></script>
 </body>
 </html>

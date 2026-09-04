@@ -1,6 +1,6 @@
-const TITLES = { home: "Ajustes", schedule: "Horario", images: "Imágenes", backup: "Copia de seguridad", advanced: "Avanzado", yaml: "Editor YAML" };
-const DEPTH = { home: 0, schedule: 1, images: 1, backup: 1, advanced: 1, yaml: 2 };
-const PARENTS = { schedule: "home", images: "home", backup: "home", advanced: "home", yaml: "advanced" };
+const TITLES = { home: "Ajustes", periods: "Periodos", calendar: "Calendario", presentation: "Presentación", images: "Imágenes", backup: "Copia de seguridad", advanced: "Avanzado", yaml: "Editor YAML" };
+const DEPTH = { home: 0, periods: 1, calendar: 1, presentation: 1, images: 1, backup: 1, advanced: 1, yaml: 2 };
+const PARENTS = { periods: "home", calendar: "home", presentation: "home", images: "home", backup: "home", advanced: "home", yaml: "advanced" };
 
 // Exact solution for a critically damped spring. Unlike a timing curve, this
 // keeps both position and velocity when an animation is retargeted.

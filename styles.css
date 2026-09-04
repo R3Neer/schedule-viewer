@@ -588,3 +588,53 @@ button:disabled { opacity: .45; cursor: default; }
     transition-duration: .001ms !important;
   }
 }
+
+/* Settings v4 shared information architecture. Theme files only skin it. */
+.settings-form-list { display: grid; gap: 16px; }
+.settings-form-row,
+.settings-summary-row {
+  min-height: 54px; display: grid; grid-template-columns: minmax(110px, .8fr) minmax(0, 1.4fr);
+  align-items: center; gap: 16px; border-bottom: 1px solid var(--line);
+}
+.settings-form-row:last-child,
+.settings-summary-row:last-child { border-bottom: 0; }
+.settings-form-row > :last-child { width: 100%; max-width: none; }
+.settings-value { color: var(--muted); text-align: right; }
+.settings-add-row {
+  width: 100%; min-height: 50px; padding: 10px 16px; border: 0; border-radius: 18px;
+  background: var(--paper); color: var(--accent); text-align: left; font: inherit; cursor: pointer;
+}
+.inline-danger { width: 100%; margin: 8px 0 12px; }
+.calendar-editor { display: grid; gap: 0; }
+.calendar-item { padding: 8px 0; border-top: 1px solid var(--line); }
+.calendar-editor > h3 + .calendar-item { border-top: 0; }
+.presentation-list .switch-row { border-top: 1px solid var(--line); }
+.compatibility-warning { border-color: color-mix(in srgb, #d97706 45%, var(--line)); }
+.compatibility-warning .secondary-button { width: 100%; margin-top: 8px; }
+.backup-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 8px 0 16px; }
+.backup-action {
+  min-height: 104px; display: grid; place-items: center; align-content: center; gap: 8px;
+  border: 0; border-radius: 22px; background: color-mix(in srgb, var(--paper) 82%, var(--bg)); color: var(--accent);
+  font: inherit; cursor: pointer;
+}
+.backup-action svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.backup-action span { font-size: 14px; }
+.image-settings-group { display: grid; gap: 0; border-radius: 22px; overflow: visible; }
+.image-settings-group > summary { min-height: 48px; padding: 10px 16px; cursor: pointer; color: var(--muted); font-size: 14px; list-style-position: inside; }
+.image-setting { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 0; gap: 0; }
+.image-setting-main { min-width: 0; min-height: 76px; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.image-setting-main .settings-chevron { margin-left: 0; }
+.image-more { align-self: center; position: relative; margin-right: 8px; }
+.image-more > summary { width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; list-style: none; color: var(--muted); }
+.image-more > summary::-webkit-details-marker { display: none; }
+.image-more-menu { position: absolute; z-index: 3; right: 0; top: 42px; min-width: 140px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+.image-more-menu button { display: block; width: 100%; min-height: 44px; padding: 8px 14px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.image-more-menu button:first-child { border-top: 0; }
+.image-more-menu button.danger { color: var(--danger); }
+
+@media (max-width: 520px) {
+  .settings-form-row,
+  .settings-summary-row { grid-template-columns: minmax(96px, .75fr) minmax(0, 1.25fr); gap: 10px; }
+  .settings-form-row .settings-date { min-width: 0; }
+  .image-setting-main { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; }
+}
