@@ -688,8 +688,25 @@ button:disabled { opacity: .45; cursor: default; }
 }
 .backup-action svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .backup-action span { font-size: 14px; }
-.image-settings-group { display: grid; gap: 0; min-width: 0; max-width: 100%; border-radius: 22px; overflow: visible; }
-.image-settings-group > summary { min-width: 0; max-width: 100%; min-height: 48px; padding: 10px 16px; cursor: pointer; color: var(--muted); font-size: 14px; list-style-position: inside; }
+.image-settings-section,
+.image-settings-group { min-width: 0; max-width: 100%; border-radius: 22px; overflow: visible; }
+.image-settings-section > summary,
+.image-settings-group > summary { display: flex; align-items: center; min-width: 0; max-width: 100%; cursor: pointer; color: var(--muted); list-style: none; }
+.image-settings-section > summary::-webkit-details-marker,
+.image-settings-group > summary::-webkit-details-marker { display: none; }
+.image-settings-section > summary::after,
+.image-settings-group > summary::after { content: "›"; margin-left: auto; color: var(--muted); font-size: 24px; font-weight: 400; line-height: 1; transform: rotate(0deg); transition: transform 140ms ease; }
+.image-settings-section[open] > summary::after,
+.image-settings-group[open] > summary::after { transform: rotate(90deg); }
+.image-settings-section > summary { min-height: 56px; padding: 12px 16px; font-size: 17px; font-weight: 600; color: var(--ink); }
+.image-settings-group > summary { min-height: 48px; padding: 10px 16px; font-size: 14px; font-weight: 500; }
+.image-settings-section[open] { padding-bottom: 10px; }
+.image-settings-section[open] + .image-settings-section { margin-top: 8px; }
+.image-settings-section > .image-settings-group { margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .image-settings-section > summary::after,
+  .image-settings-group > summary::after { transition: none; }
+}
 .image-setting { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; min-width: 0; max-width: 100%; padding: 0; gap: 0; }
 .image-setting-main { width: 100%; min-width: 0; max-width: 100%; min-height: 76px; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
 .image-setting-main .settings-chevron { margin-left: 0; }

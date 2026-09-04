@@ -41,6 +41,25 @@ assert.equal(selected.content.src, "assets/states/closure.webp");
 selected = selectScheduleContent(config, { date: "2026-12-15", viewId: "horizontal" });
 assert.equal(selected.content.src, "assets/states/winter.webp");
 
+// Landscape on inactive dates must never leak an active image from the current
+// or neighbouring period.
+const inactiveLandscape = makeConfig();
+inactiveLandscape.periods[0].images.inactive.horizontal = { type: "image", src: "assets/states/autumn-inactive.webp", alt: "Autumn inactive" };
+inactiveLandscape.periods[1].images.active.horizontal = { type: "image", src: "assets/spring/active-next.webp", alt: "Spring active" };
+inactiveLandscape.periods[1].images.inactive.horizontal = { type: "image", src: "assets/states/spring-inactive.webp", alt: "Spring inactive" };
+selected = selectScheduleContent(inactiveLandscape, { date: "2026-10-18", viewId: "horizontal" });
+assert.equal(selected.content.src, "assets/states/autumn-inactive.webp");
+selected = selectScheduleContent(inactiveLandscape, { date: "2027-01-10", viewId: "horizontal" });
+assert.equal(selected.content.src, "assets/states/winter.webp");
+selected = selectScheduleContent(inactiveLandscape, { date: "2026-08-01", viewId: "horizontal" });
+assert.equal(selected.content.src, "assets/states/autumn-inactive.webp");
+assert.notEqual(selected.content.src, "assets/spring/active-next.webp");
+delete inactiveLandscape.periods[0].images.inactive.horizontal;
+assert.throws(
+  () => selectScheduleContent(inactiveLandscape, { date: "2026-10-18", viewId: "horizontal" }),
+  /horizontal inactive image is missing/
+);
+
 for (const unit of ["week", "month"]) {
   const alternate = makeConfig();
   alternate.presentation.vertical.unit = unit;

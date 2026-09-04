@@ -59,7 +59,13 @@ async function capture(browser, options) {
   await page.route("**/lazy/apple-glass.*", route => route.abort());
   await page.goto(`${baseURL}/?date=${options.date ?? "2026-09-10"}`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
-  if (options.settings) await openPanel(page, options.settings);
+  if (options.settings) {
+    await openPanel(page, options.settings);
+    if (options.settings === "images" && options.expandImages) {
+      await page.locator('details[data-image-group="Active days"] > summary').click();
+      await page.locator('details[data-image-group^="Portrait"] > summary').click();
+    }
+  }
   await page.screenshot({ path: path.join(options.review ? review : media, options.filename) });
   await context.close();
 }
@@ -87,7 +93,7 @@ try {
     { filename: "desktop-horizontal-light.png", ...desktop },
     { filename: "iphone-vertical-light.png", ...phone, date: "2026-09-09" },
     { filename: "iphone-settings-light.png", ...phone, settings: "home" },
-    { filename: "iphone-images-light.png", ...phone, settings: "images" },
+    { filename: "iphone-images-light.png", ...phone, settings: "images", expandImages: true },
     { filename: "iphone-horizontal-landscape.png", ...landscape },
     { filename: "desktop-yaml-dark.png", ...desktop, colorScheme: "dark", settings: "yaml" }
   ]) await capture(browser, item);

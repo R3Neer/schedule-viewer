@@ -103,20 +103,48 @@ test("Imágenes separa vertical dinámica, horizontal única e inactivos", async
   await load(page);
   await panel(page, "Images");
   await expect(page.getByLabel("Period", { exact: true })).toBeVisible();
-  await expect(page.getByText("Active days", { exact: true })).toBeVisible();
-  await expect(page.getByText("Inactive days", { exact: true })).toBeVisible();
+  const active = page.locator('details[data-image-group="Active days"]');
+  const inactive = page.locator('details[data-image-group="Inactive days"]');
+  await expect(active).not.toHaveAttribute("open", "");
+  await expect(inactive).not.toHaveAttribute("open", "");
   const fixedHorizontal = page.locator('[data-image-key$=":active:horizontal"]');
   await expect(fixedHorizontal).toHaveCount(1);
+  await expect(fixedHorizontal).toBeHidden();
+  const [sectionSize, subgroupSize] = await Promise.all([
+    active.locator(":scope > summary").evaluate(node => parseFloat(getComputedStyle(node).fontSize)),
+    active.locator('details[data-image-group^="Portrait"] > summary').evaluate(node => parseFloat(getComputedStyle(node).fontSize))
+  ]);
+  expect(sectionSize).toBeGreaterThan(subgroupSize);
+  await active.locator(":scope > summary").click();
+  await expect(fixedHorizontal).toBeVisible();
+  const portrait = active.locator('details[data-image-group^="Portrait"]');
+  await expect(portrait).not.toHaveAttribute("open", "");
+  await portrait.locator(":scope > summary").click();
   const chooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: /Change Default portrait/ }).first().click();
   const chooser = await chooserPromise;
   const inputAccept = await chooser.element().getAttribute("accept");
   expect(inputAccept).not.toContain("svg");
-  await chooser.setFiles([]);
+  await chooser.setFiles({
+    name: "replacement.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64")
+  });
+  await expect(active).toHaveAttribute("open", "");
+  await expect(portrait).toHaveAttribute("open", "");
   const monday = page.locator('[data-image-key$=":active:day:monday"]');
   await monday.locator("summary").click();
   await expect(monday.getByRole("button", { name: "Change", exact: true })).toBeVisible();
   await expect(monday.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+  await active.locator(":scope > summary").click();
+  await expect(monday).toBeHidden();
+  await inactive.locator(":scope > summary").click();
+  await expect(inactive.locator('[data-image-key$=":inactive:horizontal"]')).toBeVisible();
+  for (const name of ["Recurring inactive days", "Exceptions"]) {
+    await expect(inactive.locator(`details[data-image-group="${name}"]`)).not.toHaveAttribute("open", "");
+  }
+  const optionalInactivePeriod = inactive.locator('details[data-image-group="Inactive periods"]');
+  if (await optionalInactivePeriod.count()) await expect(optionalInactivePeriod).not.toHaveAttribute("open", "");
 });
 
 test("Copia y YAML usan iconos accesibles y conservan acciones textuales críticas", async ({ page }) => {

@@ -318,6 +318,10 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
 
   function renderImages() {
     if (!workingConfig) return;
+    const expandedGroups = new Set(
+      [...imageHost.querySelectorAll("details[data-image-group][open]")]
+        .map(node => node.dataset.imageGroup)
+    );
     clearPreviews(); imageOptions.replaceChildren(); imageHost.replaceChildren();
     const periods = imagePeriods(workingConfig);
     if (!periods.some(item => item.key === selectedPeriodId)) selectedPeriodId = periods[0]?.key ?? null;
@@ -327,11 +331,35 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
     imageOptions.append(field("Period", picker));
     imageDescription.textContent = `Portrait uses ${UNIT_LABELS[workingConfig.presentation.vertical.unit].toLowerCase()} and can vary with the calendar. Landscape uses one fixed image for the period.`;
     const targets = imageTargets(workingConfig, selectedPeriodId);
-    for (const groupName of [...new Set(targets.map(item => item.group))]) {
-      const details = el("details", { class: "image-settings-group", open: ["Active days", `Portrait · ${UNIT_LABELS[workingConfig.presentation.vertical.unit]}`, "Inactive days"].includes(groupName) }, el("summary", { text: groupName }));
-      for (const item of targets.filter(target => target.group === groupName)) details.append(renderImageRow(item));
-      imageHost.append(details);
+    const grouped = new Map();
+    for (const item of targets) {
+      if (!grouped.has(item.group)) grouped.set(item.group, []);
+      grouped.get(item.group).push(item);
     }
+    const detailsFor = (name, className) => {
+      const details = el("details", { class: className, "data-image-group": name }, el("summary", { text: name }));
+      details.open = expandedGroups.has(name);
+      return details;
+    };
+    const appendRows = (host, groupName) => {
+      for (const item of grouped.get(groupName) ?? []) host.append(renderImageRow(item));
+    };
+    const appendSubgroup = (host, groupName) => {
+      if (!grouped.has(groupName)) return;
+      const details = detailsFor(groupName, "image-settings-group");
+      appendRows(details, groupName);
+      host.append(details);
+    };
+
+    const active = detailsFor("Active days", "image-settings-section");
+    appendRows(active, "Active days");
+    appendSubgroup(active, `Portrait · ${UNIT_LABELS[workingConfig.presentation.vertical.unit]}`);
+    imageHost.append(active);
+
+    const inactive = detailsFor("Inactive days", "image-settings-section");
+    appendRows(inactive, "Inactive days");
+    for (const groupName of ["Recurring inactive days", "Exceptions", "Inactive periods"]) appendSubgroup(inactive, groupName);
+    imageHost.append(inactive);
   }
 
   function renderLegacyWarning() {

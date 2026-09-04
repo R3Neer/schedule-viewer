@@ -9,6 +9,8 @@ function orientationImage(images, orientation) {
 }
 
 export function resolveDefaultInactiveContent(config, evaluation = {}, orientation = "vertical") {
+  // Inactive content always comes from the period selected for the requested
+  // date. It must never fall through to a neighbouring period's active image.
   const period = evaluation.displayPeriod ?? displayPeriodForDate(config, evaluation.date);
   const image = period?.images?.inactive?.[orientation];
   if (!image) throw new Error(`The ${orientation} inactive image is missing.`);

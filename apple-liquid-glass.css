@@ -3,7 +3,8 @@
 .image-option { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; min-height: 56px; }
 .image-option + .image-option { border-top: 1px solid var(--line); }
 .image-option select { width: 100%; min-width: 0; max-width: 100%; text-overflow: ellipsis; }
-.image-settings-group { display: grid; gap: 10px; min-width: 0; }
+.image-settings-section,
+.image-settings-group { min-width: 0; }
 .image-settings-group + .image-settings-group { margin-top: 18px; }
 .image-settings-group h3 { margin: 0 14px 2px; color: var(--muted); font-size: 14px; font-weight: 500; }
 .image-settings-group .image-setting-copy strong { white-space: normal; overflow-wrap: anywhere; }
@@ -128,6 +129,7 @@ html[data-ui-theme="apple"] .settings-add-row:active,
 html[data-ui-theme="apple"] .image-setting-main:active { background: var(--accent-soft); }
 html[data-ui-theme="apple"] .image-settings-group { background: transparent; }
 html[data-ui-theme="apple"] .image-settings-group > summary { margin: 0 14px; padding-left: 0; }
+html[data-ui-theme="apple"] .image-settings-section > summary { margin: 0 14px; padding-left: 0; }
 html[data-ui-theme="apple"] .image-setting + .image-setting { margin-top: 10px; }
 html[data-ui-theme="apple"] .image-more > button { background: var(--paper); }
 html[data-ui-theme="apple"] .settings-fab { --glass-paper: #fff; --glass-ink: #1c1c1e; isolation: isolate; }

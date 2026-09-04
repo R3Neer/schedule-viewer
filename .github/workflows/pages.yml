@@ -164,9 +164,9 @@ jobs:
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
-          for file in index.html favicon.svg manifest.webmanifest icons/apple-touch-icon.png app-updates.js apple-liquid-glass.css lazy/apple-glass.js lazy/apple-glass.css lazy/yaml-editor.js lazy/config-io.js config/schedule.json releases/20260904-v5-4/app.js releases/20260904-v5-4/settings-ui.js releases/20260904-v5-4/settings-motion.js releases/20260904-v5-4/settings-gestures.js releases/20260904-v5-4/app-updates.js; do
+          for file in index.html favicon.svg manifest.webmanifest icons/apple-touch-icon.png app-updates.js apple-liquid-glass.css lazy/apple-glass.js lazy/apple-glass.css lazy/yaml-editor.js lazy/config-io.js config/schedule.json releases/20260904-v5-5/app.js releases/20260904-v5-5/settings-ui.js releases/20260904-v5-5/settings-motion.js releases/20260904-v5-5/settings-gestures.js releases/20260904-v5-5/app-updates.js; do
             curl --fail --silent --show-error --retry 4 --retry-delay 5 --retry-all-errors "${PAGE_URL%/}/$file" --output "$RUNNER_TEMP/$(basename "$file")"
           done
-          grep -q '20260904-v5-4' "$RUNNER_TEMP/index.html"
+          grep -q '20260904-v5-5' "$RUNNER_TEMP/index.html"
           grep -q 'cm-editor' "$RUNNER_TEMP/yaml-editor.js"
           grep -q 'settings-menu-row' "$RUNNER_TEMP/apple-liquid-glass.css"
