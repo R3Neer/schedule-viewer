@@ -53,25 +53,25 @@ export function normalizeImageDescriptor(value, path = "image", defaults = {}) {
   return { type: "image", ...(hasSrc ? { src: value.src.trim() } : { asset: value.asset.trim() }), fit, alt };
 }
 
-function imageMap(value, path, validKey) {
+function imageMap(value, path, validKey, defaults) {
   if (value == null) return {};
   if (typeof value !== "object" || Array.isArray(value)) fail(path, "must be a mapping");
   return Object.fromEntries(Object.entries(value).map(([key, descriptor]) => {
     if (!validKey(key)) fail(`${path}.${key}`, "unknown time key");
-    return [key, normalizeImageDescriptor(descriptor, `${path}.${key}`)];
+    return [key, normalizeImageDescriptor(descriptor, `${path}.${key}`, defaults)];
   }));
 }
 
-function orientationImages(value, path) {
+function orientationImages(value, path, defaults) {
   if (value == null) return {};
   if (typeof value !== "object" || Array.isArray(value)) fail(path, "must be a mapping");
   return {
-    ...(value.vertical != null ? { vertical: normalizeImageDescriptor(value.vertical, `${path}.vertical`) } : {}),
-    ...(value.horizontal != null ? { horizontal: normalizeImageDescriptor(value.horizontal, `${path}.horizontal`) } : {})
+    ...(value.vertical != null ? { vertical: normalizeImageDescriptor(value.vertical, `${path}.vertical`, defaults) } : {}),
+    ...(value.horizontal != null ? { horizontal: normalizeImageDescriptor(value.horizontal, `${path}.horizontal`, defaults) } : {})
   };
 }
 
-function periodImages(value, path) {
+function periodImages(value, path, defaults) {
   const active = value?.active;
   const inactive = value?.inactive;
   const vertical = active?.vertical;
@@ -82,40 +82,40 @@ function periodImages(value, path) {
   return {
     active: {
       vertical: {
-        default: normalizeImageDescriptor(vertical.default, `${path}.active.vertical.default`),
-        days: imageMap(vertical.days, `${path}.active.vertical.days`, key => WEEKDAYS.includes(key)),
-        weeks: imageMap(vertical.weeks, `${path}.active.vertical.weeks`, key => /^\d{4}-\d{2}-\d{2}$/.test(key)),
-        months: imageMap(vertical.months, `${path}.active.vertical.months`, key => /^\d{4}-\d{2}$/.test(key))
+        default: normalizeImageDescriptor(vertical.default, `${path}.active.vertical.default`, defaults),
+        days: imageMap(vertical.days, `${path}.active.vertical.days`, key => WEEKDAYS.includes(key), defaults),
+        weeks: imageMap(vertical.weeks, `${path}.active.vertical.weeks`, key => /^\d{4}-\d{2}-\d{2}$/.test(key), defaults),
+        months: imageMap(vertical.months, `${path}.active.vertical.months`, key => /^\d{4}-\d{2}$/.test(key), defaults)
       },
-      horizontal: normalizeImageDescriptor(active.horizontal, `${path}.active.horizontal`)
+      horizontal: normalizeImageDescriptor(active.horizontal, `${path}.active.horizontal`, defaults)
     },
     inactive: {
-      vertical: normalizeImageDescriptor(inactive.vertical, `${path}.inactive.vertical`),
-      horizontal: normalizeImageDescriptor(inactive.horizontal, `${path}.inactive.horizontal`),
-      weekdays: imageMap(inactive.weekdays, `${path}.inactive.weekdays`, key => WEEKDAYS.includes(key))
+      vertical: normalizeImageDescriptor(inactive.vertical, `${path}.inactive.vertical`, defaults),
+      horizontal: normalizeImageDescriptor(inactive.horizontal, `${path}.inactive.horizontal`, defaults),
+      weekdays: imageMap(inactive.weekdays, `${path}.inactive.weekdays`, key => WEEKDAYS.includes(key), defaults)
     }
   };
 }
 
-function normalizeException(value, path) {
+function normalizeException(value, path, defaults) {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail(path, "must be a mapping");
   const state = value.state ?? "inactive";
   if (!["active", "inactive"].includes(state)) fail(`${path}.state`, "must be active or inactive");
   const kind = value.kind ?? "other";
   if (!["holiday", "closure", "other"].includes(kind)) fail(`${path}.kind`, "must be holiday, closure or other");
-  const images = orientationImages(value.images, `${path}.images`);
+  const images = orientationImages(value.images, `${path}.images`, defaults);
   if (state === "active" && Object.keys(images).length) fail(`${path}.images`, "an active exception uses the period's active images");
   return { id: identifier(value.id, `${path}.id`), date: iso(value.date, `${path}.date`), name: text(value.name, `${path}.name`), state, kind, images };
 }
 
-function normalizeInactivePeriod(value, path) {
+function normalizeInactivePeriod(value, path, defaults) {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail(path, "must be a mapping");
   const start = iso(value.start, `${path}.start`);
   const end = iso(value.end, `${path}.end`);
   if (compareDate(start, end) > 0) fail(path, "start cannot be later than end");
   const kind = value.kind ?? "other";
   if (!["vacation", "closure", "other"].includes(kind)) fail(`${path}.kind`, "must be vacation, closure or other");
-  return { id: identifier(value.id, `${path}.id`), name: text(value.name, `${path}.name`), start, end, kind, images: orientationImages(value.images, `${path}.images`) };
+  return { id: identifier(value.id, `${path}.id`), name: text(value.name, `${path}.name`), start, end, kind, images: orientationImages(value.images, `${path}.images`, defaults) };
 }
 
 function unique(items, key, path) {
@@ -139,9 +139,9 @@ export function compileSourceConfig(raw) {
   if (!activeWeekdays.length || activeWeekdays.some(day => !WEEKDAYS.includes(day)) || new Set(activeWeekdays).size !== activeWeekdays.length) {
     fail("calendar.active_weekdays", "must contain unique weekdays and at least one active day");
   }
-  const exceptions = list(raw.calendar?.exceptions, "calendar.exceptions").map((item, index) => normalizeException(item, `calendar.exceptions[${index}]`));
+  const exceptions = list(raw.calendar?.exceptions, "calendar.exceptions").map((item, index) => normalizeException(item, `calendar.exceptions[${index}]`, { fit: imageFit }));
   const inactivePeriods = list(raw.calendar?.inactive_periods ?? raw.calendar?.inactivePeriods, "calendar.inactive_periods")
-    .map((item, index) => normalizeInactivePeriod(item, `calendar.inactive_periods[${index}]`));
+    .map((item, index) => normalizeInactivePeriod(item, `calendar.inactive_periods[${index}]`, { fit: imageFit }));
   unique(exceptions, "id", "calendar.exceptions");
   unique(exceptions, "date", "calendar.exceptions");
   unique(inactivePeriods, "id", "calendar.inactive_periods");
@@ -151,7 +151,7 @@ export function compileSourceConfig(raw) {
     const start = iso(value?.start, `${path}.start`);
     const end = iso(value?.end, `${path}.end`);
     if (compareDate(start, end) > 0) fail(path, "start cannot be later than end");
-    return { id: identifier(value?.id, `${path}.id`), name: text(value?.name, `${path}.name`), start, end, images: periodImages(value?.images, `${path}.images`) };
+    return { id: identifier(value?.id, `${path}.id`), name: text(value?.name, `${path}.name`), start, end, images: periodImages(value?.images, `${path}.images`, { fit: imageFit }) };
   });
   if (!periods.length) fail("periods", "must contain at least one period");
   unique(periods, "id", "periods");
@@ -172,7 +172,7 @@ export function compileSourceConfig(raw) {
 }
 
 function sourceImage(image) {
-  return image ? { ...(image.asset ? { asset: image.asset } : { src: image.src }), ...(image.alt ? { alt: image.alt } : {}), ...(image.fit !== "contain" ? { fit: image.fit } : {}) } : undefined;
+  return image ? { ...(image.asset ? { asset: image.asset } : { src: image.src }), ...(image.alt ? { alt: image.alt } : {}), ...(image.fit != null ? { fit: image.fit } : {}) } : undefined;
 }
 function sourceMap(map) { return Object.fromEntries(Object.entries(map ?? {}).map(([key, image]) => [key, sourceImage(image)])); }
 function sourceOrientations(images) { return { ...(images?.vertical ? { vertical: sourceImage(images.vertical) } : {}), ...(images?.horizontal ? { horizontal: sourceImage(images.horizontal) } : {}) }; }

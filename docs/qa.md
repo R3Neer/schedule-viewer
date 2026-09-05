@@ -33,3 +33,9 @@ Review is performed at normal and reduced speed against the supplied Apple Music
 - no renderer remount on every animation frame.
 
 The loop is implement → capture → compare → adjust. Automated checks do not replace this inspection. Final behavior on an actual iPhone remains a user validation after Pages deploy.
+
+## Image layout regression
+
+Both browser suites run `image-layout.spec.mjs`: opaque local artwork restored from a package must fill every viewport edge with `cover` in light and dark themes, including simulated nonzero safe-area insets. The suite checks rotation and persisted reload in both engines, offline reload in Chromium, and verifies explicit `contain` under a global `cover`.
+
+For a private local reproduction, set `SCHEDULE_VIEWER_TEST_PACKAGE` to an existing `.schedule` path. The default CI fixture is synthetic; personal images must never be committed or uploaded as workflow artifacts.

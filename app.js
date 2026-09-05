@@ -190,7 +190,7 @@ async function render() {
   document.documentElement.dataset.rangeStart = selection.range.start;
   document.documentElement.dataset.rangeEnd = selection.range.end;
   document.documentElement.dataset.calendarStatus = selection.evaluation?.status ?? "unknown";
-  document.documentElement.dataset.phone = result.phoneArtwork ? "1" : "0";
+  document.documentElement.dataset.imageFit = rendered.fit;
   document.documentElement.dataset.contentType = rendered.contentType;
   document.documentElement.dataset.manualView = manualViewId ? "1" : "0";
   document.documentElement.dataset.configSource = configSource;

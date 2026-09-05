@@ -2,6 +2,24 @@
 
 All notable changes to Schedule Viewer are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-09-05
+
+### Fixed
+
+- Touch artwork uses the complete viewport without padding or safe-area gutters; floating controls retain their safe-area positioning.
+- `cover` fills the viewport on desktop too. `contain` remains available for uncropped images.
+- Every image assignment inherits `defaults.image_fit` in both the browser importer and Python compiler. Explicit image fits survive YAML and `.schedule` round trips.
+- Newly assigned images inherit the configured fit when no existing override is present.
+- A new release cache identifier delivers the corrected CSS and importer to installed clients.
+
+### Validation
+
+- Added Chromium and WebKit layout coverage for portrait, browser-height changes, landscape, narrow phones, tablets, desktop, light/dark themes, nonzero safe-area insets, package restore and offline reload.
+
+### Updating existing schedules
+
+Re-import the original `.schedule` or YAML if an earlier import stored `contain` despite a global `cover` default. Stored explicit fits are preserved because they cannot be distinguished reliably from intentional overrides. Site data does not need to be cleared.
+
 ## [1.0.0] - 2026-09-04
 
 ### Added
@@ -34,3 +52,5 @@ All notable changes to Schedule Viewer are documented here. This project follows
 - Incompatible structured-timetable and SVG-backed legacy data is isolated for recovery.
 
 [1.0.0]: https://github.com/R3Neer/schedule-viewer/releases/tag/v1.0.0
+
+[1.0.1]: https://github.com/R3Neer/schedule-viewer/releases/tag/v1.0.1

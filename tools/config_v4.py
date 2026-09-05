@@ -94,7 +94,7 @@ def normalize_image(value: Any, path: str, default_fit: str = "contain") -> dict
     return {"type": "image", **({"src": src} if src else {"asset": asset}), "fit": fit, "alt": alt}
 
 
-def _image_map(value: Any, path: str, validator) -> dict[str, Any]:
+def _image_map(value: Any, path: str, validator, default_fit: str) -> dict[str, Any]:
     if value is None:
         return {}
     if not isinstance(value, dict):
@@ -103,22 +103,22 @@ def _image_map(value: Any, path: str, validator) -> dict[str, Any]:
     for key, image in value.items():
         if not validator(key):
             fail(f"{path}.{key}", "clave temporal desconocida")
-        result[key] = normalize_image(image, f"{path}.{key}")
+        result[key] = normalize_image(image, f"{path}.{key}", default_fit)
     return result
 
 
-def _orientation_images(value: Any, path: str) -> dict[str, Any]:
+def _orientation_images(value: Any, path: str, default_fit: str) -> dict[str, Any]:
     if value is None:
         return {}
     if not isinstance(value, dict):
         fail(path, "debe ser un mapping")
     return {
-        **({"vertical": normalize_image(value["vertical"], f"{path}.vertical")} if "vertical" in value else {}),
-        **({"horizontal": normalize_image(value["horizontal"], f"{path}.horizontal")} if "horizontal" in value else {}),
+        **({"vertical": normalize_image(value["vertical"], f"{path}.vertical", default_fit)} if "vertical" in value else {}),
+        **({"horizontal": normalize_image(value["horizontal"], f"{path}.horizontal", default_fit)} if "horizontal" in value else {}),
     }
 
 
-def _period_images(value: Any, path: str) -> dict[str, Any]:
+def _period_images(value: Any, path: str, default_fit: str) -> dict[str, Any]:
     try:
         vertical = value["active"]["vertical"]
         active_horizontal = value["active"]["horizontal"]
@@ -130,17 +130,17 @@ def _period_images(value: Any, path: str) -> dict[str, Any]:
     return {
         "active": {
             "vertical": {
-                "default": normalize_image(default_vertical, f"{path}.active.vertical.default"),
-                "days": _image_map(vertical.get("days"), f"{path}.active.vertical.days", lambda key: key in WEEKDAYS),
-                "weeks": _image_map(vertical.get("weeks"), f"{path}.active.vertical.weeks", lambda key: bool(ISO_DATE.fullmatch(key))),
-                "months": _image_map(vertical.get("months"), f"{path}.active.vertical.months", lambda key: bool(re.fullmatch(r"\d{4}-\d{2}", key))),
+                "default": normalize_image(default_vertical, f"{path}.active.vertical.default", default_fit),
+                "days": _image_map(vertical.get("days"), f"{path}.active.vertical.days", lambda key: key in WEEKDAYS, default_fit),
+                "weeks": _image_map(vertical.get("weeks"), f"{path}.active.vertical.weeks", lambda key: bool(ISO_DATE.fullmatch(key)), default_fit),
+                "months": _image_map(vertical.get("months"), f"{path}.active.vertical.months", lambda key: bool(re.fullmatch(r"\d{4}-\d{2}", key)), default_fit),
             },
-            "horizontal": normalize_image(active_horizontal, f"{path}.active.horizontal"),
+            "horizontal": normalize_image(active_horizontal, f"{path}.active.horizontal", default_fit),
         },
         "inactive": {
-            "vertical": normalize_image(inactive_vertical, f"{path}.inactive.vertical"),
-            "horizontal": normalize_image(inactive_horizontal, f"{path}.inactive.horizontal"),
-            "weekdays": _image_map(value["inactive"].get("weekdays"), f"{path}.inactive.weekdays", lambda key: key in WEEKDAYS),
+            "vertical": normalize_image(inactive_vertical, f"{path}.inactive.vertical", default_fit),
+            "horizontal": normalize_image(inactive_horizontal, f"{path}.inactive.horizontal", default_fit),
+            "weekdays": _image_map(value["inactive"].get("weekdays"), f"{path}.inactive.weekdays", lambda key: key in WEEKDAYS, default_fit),
         },
     }
 
@@ -174,7 +174,7 @@ def compile_config_data(raw: dict[str, Any]) -> dict[str, Any]:
             fail(f"{path}.state", "debe ser active o inactive")
         if kind not in {"holiday", "closure", "other"}:
             fail(f"{path}.kind", "valor desconocido")
-        images = _orientation_images(value.get("images"), f"{path}.images")
+        images = _orientation_images(value.get("images"), f"{path}.images", fit)
         if state == "active" and images:
             fail(f"{path}.images", "una excepción activa usa las imágenes del periodo")
         exceptions.append({"id": _id(value.get("id"), f"{path}.id"), "date": _date(value.get("date"), f"{path}.date"), "name": _text(value.get("name"), f"{path}.name"), "state": state, "kind": kind, "images": images})
@@ -189,7 +189,7 @@ def compile_config_data(raw: dict[str, Any]) -> dict[str, Any]:
         kind = value.get("kind", "other")
         if kind not in {"vacation", "closure", "other"}:
             fail(f"{path}.kind", "valor desconocido")
-        inactive_periods.append({"id": _id(value.get("id"), f"{path}.id"), "name": _text(value.get("name"), f"{path}.name"), "start": start, "end": end, "kind": kind, "images": _orientation_images(value.get("images"), f"{path}.images")})
+        inactive_periods.append({"id": _id(value.get("id"), f"{path}.id"), "name": _text(value.get("name"), f"{path}.name"), "start": start, "end": end, "kind": kind, "images": _orientation_images(value.get("images"), f"{path}.images", fit)})
 
     periods = []
     for index, value in enumerate(_list(raw.get("periods"), "periods")):
@@ -198,7 +198,7 @@ def compile_config_data(raw: dict[str, Any]) -> dict[str, Any]:
         end = _date(value.get("end"), f"{path}.end")
         if start > end:
             fail(path, "start no puede ser posterior a end")
-        periods.append({"id": _id(value.get("id"), f"{path}.id"), "name": _text(value.get("name"), f"{path}.name"), "start": start, "end": end, "images": _period_images(value.get("images"), f"{path}.images")})
+        periods.append({"id": _id(value.get("id"), f"{path}.id"), "name": _text(value.get("name"), f"{path}.name"), "start": start, "end": end, "images": _period_images(value.get("images"), f"{path}.images", fit)})
     if not periods:
         fail("periods", "debe contener al menos un periodo")
     for previous, current in zip(sorted(periods, key=lambda item: item["start"]), sorted(periods, key=lambda item: item["start"])[1:]):

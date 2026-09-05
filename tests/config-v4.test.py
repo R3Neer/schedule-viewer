@@ -34,3 +34,24 @@ rejects(lambda raw: raw["presentation"]["vertical"].update(unit="year"), "day, w
 rejects(lambda raw: raw["calendar"]["exceptions"].append(copy.deepcopy(raw["calendar"]["exceptions"][0])), "duplicados")
 
 print("config-v4: compilación y contratos negativos OK")
+
+# The build compiler must agree with the browser on every image assignment.
+fit_source = copy.deepcopy(source)
+fit_source["defaults"]["image_fit"] = "cover"
+def visit_images(value, callback):
+    if isinstance(value, dict):
+        if "src" in value or "asset" in value:
+            callback(value)
+        else:
+            for child in value.values():
+                visit_images(child, callback)
+    elif isinstance(value, list):
+        for child in value:
+            visit_images(child, callback)
+visit_images(fit_source, lambda image: image.pop("fit", None))
+fit_source["periods"][0]["images"]["active"]["horizontal"] = {"src": "assets/override.webp", "fit": "contain"}
+fit_compiled = compile_config_data(fit_source)
+override = fit_compiled["periods"][0]["images"]["active"]["horizontal"]
+def assert_fit(image):
+    assert image["fit"] == ("contain" if image is override else "cover"), image
+visit_images(fit_compiled, assert_fit)

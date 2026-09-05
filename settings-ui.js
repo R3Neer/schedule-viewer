@@ -215,7 +215,7 @@ export function initSettingsUI({ deviceMode, getState, applyLocalConfig, resetTo
     supportedFile(file);
     const id = `asset-${crypto.randomUUID()}`;
     pendingAssets.set(id, { id, blob: file, mimeType: file.type, filename: file.name });
-    target.set({ type: "image", asset: id, alt: target.label, fit: target.get()?.fit ?? "contain" });
+    target.set({ type: "image", asset: id, alt: target.label, fit: target.get()?.fit ?? workingConfig.defaults.imageFit });
     markDirty(); renderImages();
   });
 

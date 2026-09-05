@@ -101,7 +101,7 @@ assert.equal(context.isMigrationCache("schedule-viewer-offline-v3-content"), tru
 assert.equal(context.isMigrationCache("schedule-viewer-offline-v4"), false);
 
 assert.match(code, /config\/schedule\.json/);
-assert.equal(vm.runInContext("CACHE_NAME", context), "schedule-viewer-offline-20260904-v5-6");
+assert.equal(vm.runInContext("CACHE_NAME", context), "schedule-viewer-offline-20260905-v1-0-1");
 assert.match(code, /MIGRATION_CACHE_PREFIX/);
 assert.match(code, /discoverImageDescriptors/);
 assert.match(code, /ignoreSearch/);

@@ -94,3 +94,11 @@ The `asset` identifier resolves to the original Blob in IndexedDB. YAML export t
 The editor and normal import accept only v4. Runtime migration accepts a v3 configuration only when every used term has valid daily and weekly image assets and none is SVG. Terms become independent periods; calendar exceptions and inactive intervals are retained; structured subjects, sessions, title and brand metadata are discarded.
 
 If that safe mapping is impossible, the original record remains isolated and downloadable instead of being overwritten.
+
+## Image fitting
+
+`defaults.image_fit` applies to every image without its own `fit`, including day/week/month overrides, inactive weekdays, exceptions and inactive periods. An explicit `fit: contain` overrides a global `cover` and survives YAML and package export.
+
+`cover` fills the available viewport on touch devices and desktop, cropping when the artwork and viewport proportions differ. `contain` displays the entire image and may leave background visible. On touch devices the image box reaches the viewport edges; only floating controls are inset for notches and the home indicator.
+
+If a pre-fix import stored the wrong effective fit, import the original YAML or `.schedule` again. Existing normalized image fits are not silently rewritten.

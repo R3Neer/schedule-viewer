@@ -50,3 +50,18 @@ legacySvg.academicYears[0].terms[0].assets.week = "assets/legacy/week.svg";
 assert.throws(() => migrateV3Config(legacySvg), /SVG is not allowed/);
 
 console.log("config-schema: contrato v4, roundtrip, migración segura y formatos de imagen OK");
+
+// Defaults reach every image path, while explicit overrides survive export.
+const fitSource = makeSourceConfig();
+fitSource.defaults.image_fit = "cover";
+function visitImages(value, callback) {
+  if (!value || typeof value !== "object") return;
+  if (value.src || value.asset) callback(value);
+  else Object.values(value).forEach(child => visitImages(child, callback));
+}
+visitImages(fitSource, image => { delete image.fit; });
+fitSource.periods[0].images.active.horizontal.fit = "contain";
+const fitConfig = compileSourceConfig(fitSource);
+visitImages(fitConfig, image => assert.equal(image.fit,
+  image === fitConfig.periods[0].images.active.horizontal ? "contain" : "cover"));
+assert.deepEqual(compileSourceConfig(decompileConfig(fitConfig)), fitConfig);

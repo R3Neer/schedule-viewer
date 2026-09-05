@@ -34,3 +34,11 @@ assert.throws(() => yamlToCompiled("version: 3\n"), /version/);
 assert.throws(() => yamlToCompiled(yaml.replace("assets/autumn/horizontal.webp", "assets/autumn/horizontal.svg")), /SVG/);
 
 console.log("config-io: YAML v4 y .schedule preservan MIME, nombre y bytes GIF OK");
+
+const coverConfig = structuredClone(config);
+coverConfig.defaults.imageFit = "cover";
+coverConfig.periods[0].images.active.vertical.default.fit = "cover";
+const coverPackage = await exportSchedulePackage({ config: coverConfig, assets });
+const coverRestored = await inspectSchedulePackage(coverPackage);
+assert.deepEqual(coverRestored.config, normalizeCompiledConfig(coverConfig));
+assert.equal(coverRestored.config.periods[0].images.active.horizontal.fit, "contain");
