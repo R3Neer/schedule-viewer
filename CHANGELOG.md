@@ -6,6 +6,8 @@ All notable changes to Schedule Viewer are documented here. This project follows
 
 ### Fixed
 
+- Installed iOS apps explicitly request a translucent status bar so portrait artwork can extend behind system chrome.
+
 - Touch artwork uses the complete viewport without padding or safe-area gutters; floating controls retain their safe-area positioning.
 - `cover` fills the viewport on desktop too. `contain` remains available for uncropped images.
 - Every image assignment inherits `defaults.image_fit` in both the browser importer and Python compiler. Explicit image fits survive YAML and `.schedule` round trips.

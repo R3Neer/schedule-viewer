@@ -15,7 +15,7 @@ for (const size of cases) test.describe(size.name, () => {
   test.use({ viewport: { width: size.width, height: size.height }, hasTouch: size.touch,
     isMobile: size.touch, ...(size.touch ? { userAgent: phoneUA } : {}) });
   test("cover fills the viewport after package restore and rotation", async ({ page, context, browserName }) => {
-    await page.goto("/?date=2026-09-07");
+    await page.goto(`/?date=${process.env.SCHEDULE_VIEWER_TEST_DATE || "2026-09-07"}`);
     await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
     // Public CI uses synthetic opaque artwork, never a personal schedule.
     const payload = process.env.SCHEDULE_VIEWER_TEST_PACKAGE
@@ -99,4 +99,12 @@ test("explicit contain survives a cover default and preserves the complete image
   const aspect = await image.evaluate(img => ({ natural: img.naturalWidth / img.naturalHeight,
     box: img.getBoundingClientRect().width / img.getBoundingClientRect().height }));
   expect(aspect.box).toBeCloseTo(aspect.natural, 2);
+});
+
+
+test("installed iOS shell requests artwork behind the status bar", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute("content", "yes");
+  await expect(page.locator('meta[name="apple-mobile-web-app-status-bar-style"]')).toHaveAttribute("content", "black-translucent");
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute("content", /viewport-fit=cover/);
 });
