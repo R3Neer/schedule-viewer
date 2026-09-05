@@ -2,7 +2,8 @@ import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
 import {
   cleanupLegacyMigrationCaches, deleteAsset, deleteUnreferencedAssets, getAsset,
-  hasUserConfig, listAssets, loadUserConfig, openScheduleDb, putAsset, resetUserState, saveUserState
+  hasUserConfig, listAssets, loadUserConfig, openScheduleDb, putAsset, repairStoredImageFits,
+  resetUserState, saveUserState
 } from "../local-store.js";
 import { makeConfig } from "./fixture-config.mjs";
 
@@ -32,6 +33,41 @@ const rawAsset = await new Promise((resolve, reject) => {
 rawDb.close();
 assert.equal(rawAsset.blob, undefined);
 assert.deepEqual(new Uint8Array(rawAsset.bytes), bytes);
+
+const staleConfig = structuredClone(stored.normalized);
+staleConfig.defaults.imageFit = "cover";
+const visitImages = (value, callback) => {
+  if (!value || typeof value !== "object") return;
+  if (value.type === "image") callback(value);
+  else Object.values(value).forEach(child => visitImages(child, callback));
+};
+visitImages(staleConfig, image => { image.fit = "contain"; });
+const staleDb = await openScheduleDb();
+const staleTransaction = staleDb.transaction("config", "readwrite");
+staleTransaction.objectStore("config").put({
+  id: "active", normalized: staleConfig, yaml: "original cover source", version: 4, source: "local"
+});
+await new Promise((resolve, reject) => {
+  staleTransaction.oncomplete = resolve;
+  staleTransaction.onerror = () => reject(staleTransaction.error);
+  staleTransaction.onabort = () => reject(staleTransaction.error);
+});
+staleDb.close();
+const repaired = await repairStoredImageFits(await loadUserConfig(), yaml => {
+  assert.equal(yaml, "original cover source");
+  const result = structuredClone(staleConfig);
+  visitImages(result, image => { image.fit = "cover"; });
+  return result;
+});
+assert.equal(repaired.imageFitRevision, 1);
+visitImages(repaired.normalized, image => assert.equal(image.fit, "cover"));
+assert.deepEqual(new Uint8Array((await getAsset("default-local")).blob ? await (await getAsset("default-local")).blob.arrayBuffer() : []), bytes);
+
+const divergent = structuredClone(repaired);
+delete divergent.imageFitRevision;
+divergent.normalized.periods[0].name = "User edit absent from YAML";
+const unchanged = await repairStoredImageFits(divergent, () => repaired.normalized);
+assert.equal(unchanged.normalized.periods[0].name, "User edit absent from YAML");
 
 const legacyDb = await openScheduleDb();
 const legacyTransaction = legacyDb.transaction("assets", "readwrite");

@@ -108,3 +108,58 @@ test("installed iOS shell requests artwork behind the status bar", async ({ page
   await expect(page.locator('meta[name="apple-mobile-web-app-status-bar-style"]')).toHaveAttribute("content", "black-translucent");
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute("content", /viewport-fit=cover/);
 });
+
+test("reopening repairs image fits saved by the defective importer", async ({ page, context }) => {
+  await page.goto("/?date=2026-09-05");
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
+  await page.evaluate(async source => {
+    source.defaults.image_fit = "cover";
+    const replace = value => {
+      if (!value || typeof value !== "object") return;
+      if (value.src) { delete value.src; delete value.fit; value.asset = "repair-opaque"; }
+      else Object.values(value).forEach(replace);
+    };
+    replace(source);
+    const io = await import("./lazy/config-io.js");
+    const intended = io.yamlToCompiled(io.compiledToYaml(source));
+    const defective = structuredClone(intended);
+    const setContain = value => {
+      if (!value || typeof value !== "object") return;
+      if (value.type === "image") value.fit = "contain";
+      else Object.values(value).forEach(setContain);
+    };
+    setContain(defective);
+    const canvas = document.createElement("canvas");
+    canvas.width = 1206; canvas.height = 2622;
+    const blob = await new Promise(resolve => canvas.toBlob(resolve));
+    const store = await import("./local-store.js");
+    await store.putAsset({ id: "repair-opaque", blob, filename: "repair.png", mimeType: "image/png" });
+    const db = await store.openScheduleDb();
+    const transaction = db.transaction("config", "readwrite");
+    transaction.objectStore("config").put({
+      id: "active", normalized: defective, yaml: io.compiledToYaml(intended), version: 4, source: "local"
+    });
+    await new Promise((resolve, reject) => {
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    db.close();
+  }, makeSourceConfig());
+  await page.close();
+
+  const reopened = await context.newPage();
+  await reopened.goto("/?date=2026-09-05");
+  await expect(reopened.locator("html")).toHaveAttribute("data-app-ready", "1");
+  await expect(reopened.locator("html")).toHaveAttribute("data-image-fit", "cover");
+  await expect(reopened.locator("#schedule-image")).toHaveCSS("object-fit", "cover");
+  const state = await reopened.evaluate(async () => {
+    const store = await import("./local-store.js");
+    const record = await store.loadUserConfig();
+    const asset = await store.getAsset("repair-opaque");
+    return { revision: record.imageFitRevision, fit: record.normalized.periods[0].images.inactive.vertical.fit,
+      assetBytes: asset.blob.size };
+  });
+  expect(state).toEqual({ revision: 1, fit: "cover", assetBytes: expect.any(Number) });
+  expect(state.assetBytes).toBeGreaterThan(0);
+});

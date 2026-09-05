@@ -7,6 +7,7 @@ All notable changes to Schedule Viewer are documented here. This project follows
 ### Fixed
 
 - Installed iOS apps explicitly request a translucent status bar so portrait artwork can extend behind system chrome.
+- Configurations saved by the defective image-fit importer are repaired from their synchronized YAML on the next launch, without replacing local image bytes or requiring another import.
 
 - Touch artwork uses the complete viewport without padding or safe-area gutters; floating controls retain their safe-area positioning.
 - `cover` fills the viewport on desktop too. `contain` remains available for uncropped images.

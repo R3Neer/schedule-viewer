@@ -101,4 +101,4 @@ If that safe mapping is impossible, the original record remains isolated and dow
 
 `cover` fills the available viewport on touch devices and desktop, cropping when the artwork and viewport proportions differ. `contain` displays the entire image and may leave background visible. On touch devices the image box reaches the viewport edges; only floating controls are inset for notches and the home indicator.
 
-If a pre-fix import stored the wrong effective fit, import the original YAML or `.schedule` again. Existing normalized image fits are not silently rewritten.
+From release revision `r3`, the app repairs a pre-fix imported configuration automatically when its synchronized YAML differs only in image fitting. It keeps the existing local image bytes. If any other saved field differs, the migration leaves the normalized configuration untouched to avoid overwriting later edits; re-importing the original YAML or `.schedule` remains the explicit recovery path for that case.

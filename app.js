@@ -14,6 +14,7 @@ import {
   listAssets,
   loadUserConfig,
   migrateCachedV3Config,
+  repairStoredImageFits,
   resetUserState,
   saveUserState
 } from "./local-store.js";
@@ -298,6 +299,10 @@ async function fetchDemoConfig() {
 
 async function loadInitialConfig() {
   let local = await loadUserConfig();
+  if (local?.normalized?.version === 4 && local.imageFitRevision == null && local.yaml) {
+    const io = await import("./lazy/config-io.js");
+    local = await repairStoredImageFits(local, io.yamlToCompiled);
+  }
   if (!local) {
     local = await migrateCachedV3Config();
   } else {

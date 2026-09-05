@@ -6,6 +6,7 @@ const CONFIG_STORE = "config";
 const ASSET_STORE = "assets";
 const ACTIVE_CONFIG_ID = "active";
 const V3_MIGRATION_CACHE_PREFIX = "schedule-viewer-offline-v3";
+const IMAGE_FIT_REVISION = 1;
 
 function requestAsPromise(request) {
   return new Promise((resolve, reject) => {
@@ -61,6 +62,27 @@ export async function loadUserConfig(factory = globalThis.indexedDB) {
     return saveUserState({ config: migrated, yaml: null, source: "local" }, factory);
   } catch (error) {
     return { id: ACTIVE_CONFIG_ID, normalized: null, legacyIncompatible: true, error: error.message, legacy: record };
+  }
+}
+
+function withoutImageFits(value) {
+  if (Array.isArray(value)) return value.map(withoutImageFits);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => key !== "fit")
+    .map(([key, child]) => [key, withoutImageFits(child)]));
+}
+
+export async function repairStoredImageFits(record, compileYaml, factory = globalThis.indexedDB) {
+  if (!record?.normalized || record.normalized.version !== 4 || record.imageFitRevision === IMAGE_FIT_REVISION) return record;
+  if (typeof record.yaml !== "string" || typeof compileYaml !== "function") return record;
+  try {
+    const recompiled = compileYaml(record.yaml);
+    if (JSON.stringify(withoutImageFits(recompiled)) !== JSON.stringify(withoutImageFits(record.normalized))) return record;
+    return saveUserState({ config: recompiled, yaml: record.yaml, source: record.source ?? "local" }, factory);
+  } catch {
+    // Keep the last known-good normalized config when its saved source is stale.
+    return record;
   }
 }
 
@@ -149,6 +171,7 @@ export async function saveUserState({ config, yaml = null, assets = [], source =
     normalized: structuredClone(normalized),
     yaml: typeof yaml === "string" ? yaml : null,
     version: 4,
+    imageFitRevision: IMAGE_FIT_REVISION,
     source,
     updatedAt: now
   };
