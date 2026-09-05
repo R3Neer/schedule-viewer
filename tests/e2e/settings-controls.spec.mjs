@@ -76,6 +76,27 @@ test.describe("independent platform layout and materials", () => {
 test.describe("touch floating settings control", () => {
   test.use({ viewport: { width: 402, height: 874 }, isMobile: true, hasTouch: true, userAgent: IPHONE_UA });
 
+  test("installed PWA keeps the settings button 14px from the edge in both orientations", async ({ page }, testInfo) => {
+    await page.addInitScript(() => Object.defineProperty(navigator, "standalone", { configurable: true, value: true }));
+    await ready(page);
+    await expect(page.locator("html")).toHaveAttribute("data-display-mode", "standalone");
+    await page.locator("#demo-hint").evaluate(node => { node.hidden = true; });
+    const gear = page.locator("#settings-button");
+
+    const capture = async (name) => {
+      const box = await gear.boundingBox();
+      const viewport = page.viewportSize();
+      expect(box).not.toBeNull();
+      expect(viewport.width - box.x - box.width).toBeCloseTo(14, 0);
+      await page.screenshot({ path: testInfo.outputPath(name) });
+    };
+
+    await capture("settings-button-portrait.png");
+    await page.setViewportSize({ width: 874, height: 402 });
+    await expect(page.locator("html")).toHaveAttribute("data-view-profile", "horizontal");
+    await capture("settings-button-landscape.png");
+  });
+
   test("appears initially, hides, and each page tap starts a fresh visible interval", async ({ page }) => {
     await page.clock.install();
     await ready(page);

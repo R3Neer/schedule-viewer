@@ -2,6 +2,13 @@
 
 All notable changes to Schedule Viewer are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-09-05
+
+### Fixed
+
+- In an installed mobile PWA, the floating Settings button now stays 14px from the screen edge in both orientations. Regular Safari still respects its right safe-area inset.
+- Images configured as `cover` automatically switch to `contain` on any device when filling the viewport would crop more than 10% of the image.
+
 ## [1.0.1] - 2026-09-05
 
 ### Fixed
@@ -57,3 +64,4 @@ Open the app once on this release to repair an earlier import that stored `conta
 [1.0.0]: https://github.com/R3Neer/schedule-viewer/releases/tag/v1.0.0
 
 [1.0.1]: https://github.com/R3Neer/schedule-viewer/releases/tag/v1.0.1
+[1.0.2]: https://github.com/R3Neer/schedule-viewer/releases/tag/v1.0.2

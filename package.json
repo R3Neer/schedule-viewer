@@ -1,6 +1,6 @@
 {
   "name": "schedule-viewer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Local-first, offline calendar image viewer driven by periods, calendar rules and screen orientation.",
   "license": "MIT",

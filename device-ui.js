@@ -41,12 +41,43 @@ export function readDeviceCapabilities(win = window, nav = navigator) {
   };
 }
 
+export function detectDisplayMode(win = window, nav = navigator) {
+  return nav.standalone === true || Boolean(win.matchMedia?.("(display-mode: standalone)").matches)
+    ? "standalone"
+    : "browser";
+}
+
 export function applyUiEnvironment(doc = document, win = window, nav = navigator) {
   const capabilities = readDeviceCapabilities(win, nav);
   const { deviceMode, uiTheme } = resolveUiEnvironment(capabilities);
+  const displayMode = detectDisplayMode(win, nav);
   doc.documentElement.dataset.deviceMode = deviceMode;
   doc.documentElement.dataset.uiTheme = uiTheme;
-  return { deviceMode, uiTheme, capabilities };
+  doc.documentElement.dataset.displayMode = displayMode;
+  return { deviceMode, uiTheme, displayMode, capabilities };
+}
+
+export const MAX_COVER_CROP = 0.1;
+
+export function coverCropFraction({ imageWidth, imageHeight, viewportWidth, viewportHeight } = {}) {
+  if (![imageWidth, imageHeight, viewportWidth, viewportHeight].every(value => Number(value) > 0)) return 0;
+  const imageAspect = imageWidth / imageHeight;
+  const viewportAspect = viewportWidth / viewportHeight;
+  return 1 - Math.min(imageAspect / viewportAspect, viewportAspect / imageAspect);
+}
+
+export function resolveViewportImageFit({
+  requestedFit = "contain",
+  imageWidth = 0,
+  imageHeight = 0,
+  viewportWidth = 0,
+  viewportHeight = 0,
+  maxCropFraction = MAX_COVER_CROP
+} = {}) {
+  if (requestedFit !== "cover") return requestedFit;
+  return coverCropFraction({ imageWidth, imageHeight, viewportWidth, viewportHeight }) > maxCropFraction
+    ? "contain"
+    : "cover";
 }
 
 // Layout and materials are deliberately independent: Android shares the

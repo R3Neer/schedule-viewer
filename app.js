@@ -18,7 +18,7 @@ import {
   resetUserState,
   saveUserState
 } from "./local-store.js";
-import { applyUiEnvironment } from "./device-ui.js";
+import { applyUiEnvironment, resolveViewportImageFit } from "./device-ui.js";
 import { initSettingsUI } from "./settings-ui.js";
 import { initAppUpdates } from "./app-updates.js";
 
@@ -35,6 +35,7 @@ let legacyRecord = null;
 let currentKey = null;
 let currentRendered = null;
 let currentSelection = null;
+let requestedImageFit = "contain";
 let manualViewId = null;
 const viewportRenderTimers = new Set();
 let renderGeneration = 0;
@@ -73,6 +74,19 @@ function viewportContext() {
 
 function viewportSignature(viewport) {
   return `${viewport.width}x${viewport.height}:${viewport.orientation}:${viewport.pointer}`;
+}
+
+function applyViewportImageFit() {
+  const effectiveFit = resolveViewportImageFit({
+    requestedFit: requestedImageFit,
+    imageWidth: image.naturalWidth,
+    imageHeight: image.naturalHeight,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight
+  });
+  document.documentElement.dataset.requestedImageFit = requestedImageFit;
+  document.documentElement.dataset.imageFit = effectiveFit;
+  image.style.objectFit = effectiveFit;
 }
 
 function scheduleViewportRender() {
@@ -191,14 +205,13 @@ async function render() {
   document.documentElement.dataset.rangeStart = selection.range.start;
   document.documentElement.dataset.rangeEnd = selection.range.end;
   document.documentElement.dataset.calendarStatus = selection.evaluation?.status ?? "unknown";
-  document.documentElement.dataset.imageFit = rendered.fit;
   document.documentElement.dataset.contentType = rendered.contentType;
   document.documentElement.dataset.manualView = manualViewId ? "1" : "0";
   document.documentElement.dataset.configSource = configSource;
   document.title = `Schedule Viewer · ${date}`;
 
   image.alt = selection.alt;
-  image.style.objectFit = rendered.fit;
+  requestedImageFit = rendered.fit;
   image.hidden = false;
   errorBox.hidden = true;
 
@@ -210,6 +223,7 @@ async function render() {
     if (!result.recovered) delete document.documentElement.dataset.imageRecovery;
     image.src = rendered.src;
   }
+  applyViewportImageFit();
 }
 
 function showError(error) {
@@ -219,6 +233,8 @@ function showError(error) {
   errorBox.hidden = false;
   errorBox.textContent = "The view could not be loaded. Check the configuration or try again.";
 }
+
+image.addEventListener("load", applyViewportImageFit);
 
 function isEditableOrInteractive(target) {
   if (!(target instanceof Element)) return false;

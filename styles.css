@@ -1,5 +1,6 @@
 :root {
   color-scheme: light dark;
+  --touch-control-right: max(14px, calc(env(safe-area-inset-right) + 12px));
   --bg: #f4f7fb;
   --paper: #ffffff;
   --ink: #102a43;
@@ -91,6 +92,16 @@ html:is([data-device-mode="touch"], [data-image-fit="cover"]) .schedule-shell {
   min-height: 0;
   padding: 0;
   overflow: hidden;
+}
+
+@media all and (display-mode: standalone) {
+  :root {
+    --touch-control-right: 14px;
+  }
+}
+
+html[data-display-mode="standalone"] {
+  --touch-control-right: 14px;
 }
 
 /* WebKit subtracts the safe area from dynamic viewport units in installed
@@ -186,13 +197,13 @@ html.settings-modal-open[data-device-mode="touch"] body {
    anchored to the bottom safe area instead of trusting the top inset. */
 html[data-device-mode="touch"] .settings-fab {
   top: auto;
-  right: max(14px, calc(env(safe-area-inset-right) + 12px));
+  right: var(--touch-control-right);
   bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px));
 }
 
 html[data-device-mode="touch"] .demo-hint {
   top: auto;
-  right: max(14px, calc(env(safe-area-inset-right) + 12px));
+  right: var(--touch-control-right);
   bottom: max(72px, calc(env(safe-area-inset-bottom) + 66px));
 }
 

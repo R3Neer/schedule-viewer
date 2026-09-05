@@ -4,12 +4,12 @@ import { readFile } from "node:fs/promises";
 
 const phoneUA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1";
 const cases = [
-  { name: "iPhone portrait", width: 402, height: 874, touch: true },
-  { name: "iPhone browser bars", width: 402, height: 740, touch: true },
-  { name: "iPhone landscape", width: 874, height: 402, touch: true },
-  { name: "narrow phone", width: 360, height: 800, touch: true },
-  { name: "tablet", width: 820, height: 1180, touch: true },
-  { name: "desktop", width: 1440, height: 900, touch: false }
+  { name: "iPhone portrait", width: 402, height: 874, touch: true, fit: "cover", rotatedFit: "cover" },
+  { name: "iPhone browser bars", width: 402, height: 740, touch: true, fit: "contain", rotatedFit: "contain" },
+  { name: "iPhone landscape", width: 874, height: 402, touch: true, fit: "cover", rotatedFit: "cover" },
+  { name: "narrow phone", width: 360, height: 800, touch: true, fit: "cover", rotatedFit: "cover" },
+  { name: "tablet", width: 820, height: 1180, touch: true, fit: "contain", rotatedFit: "contain" },
+  { name: "desktop", width: 1440, height: 900, touch: false, fit: "contain", rotatedFit: "contain" }
 ];
 for (const size of cases) test.describe(size.name, () => {
   test.use({ viewport: { width: size.width, height: size.height }, hasTouch: size.touch,
@@ -28,18 +28,28 @@ for (const size of cases) test.describe(size.name, () => {
       if (payload) backup = new Blob([Uint8Array.from(atob(payload), char => char.charCodeAt(0))]);
       else {
         source.defaults.image_fit = "cover";
-        const replace = value => {
+        const replace = (value, path = []) => {
           if (!value || typeof value !== "object") return;
-          if (value.src) { delete value.src; delete value.fit; value.asset = "opaque"; }
-          else Object.values(value).forEach(replace);
+          if (value.src) {
+            delete value.src;
+            delete value.fit;
+            value.asset = path.includes("horizontal") ? "opaque-landscape" : "opaque-portrait";
+          } else Object.entries(value).forEach(([key, child]) => replace(child, [...path, key]));
         };
         replace(source);
-        const canvas = document.createElement("canvas");
-        canvas.width = 1206; canvas.height = 2622;
-        const ctx = canvas.getContext("2d"); ctx.fillStyle = "#ae5632"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const blob = await new Promise(resolve => canvas.toBlob(resolve));
+        const makeBlob = async (width, height, color) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext("2d"); ctx.fillStyle = color; ctx.fillRect(0, 0, width, height);
+          return new Promise(resolve => canvas.toBlob(resolve));
+        };
+        const portrait = await makeBlob(1206, 2622, "#ae5632");
+        const landscape = await makeBlob(2622, 1206, "#356a9a");
         backup = await io.exportSchedulePackage({ config: compileSourceConfig(source),
-          assets: [{ id: "opaque", blob, filename: "opaque.png", mimeType: "image/png" }] });
+          assets: [
+            { id: "opaque-portrait", blob: portrait, filename: "portrait.png", mimeType: "image/png" },
+            { id: "opaque-landscape", blob: landscape, filename: "landscape.png", mimeType: "image/png" }
+          ] });
       }
       const imported = await io.inspectSchedulePackage(backup);
       await saveUserState({ config: imported.config, yaml: imported.yaml, assets: imported.assets });
@@ -59,25 +69,40 @@ for (const size of cases) test.describe(size.name, () => {
     await page.addStyleTag({ content: css });
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
-      await expect(image).toHaveCSS("object-fit", "cover");
+      await expect(image).toHaveCSS("object-fit", size.fit);
       const metrics = await image.evaluate(img => {
         const box = img.getBoundingClientRect();
         return { x: box.x, y: box.y, width: box.width, height: box.height, vw: innerWidth, vh: innerHeight,
           padding: getComputedStyle(img.parentElement).padding, scroll: document.documentElement.scrollWidth };
       });
-      expect(metrics).toEqual({ x: 0, y: 0, width: size.width, height: size.height,
-        vw: size.width, vh: size.height, padding: "0px", scroll: size.width });
+      expect(metrics.scroll).toBe(size.width);
+      if (size.fit === "cover") {
+        expect(metrics).toMatchObject({ x: 0, y: 0, width: size.width, height: size.height,
+          vw: size.width, vh: size.height, padding: "0px" });
+      } else {
+        expect(metrics.x).toBeGreaterThanOrEqual(0);
+        expect(metrics.y).toBeGreaterThanOrEqual(0);
+        expect(metrics.x + metrics.width).toBeLessThanOrEqual(size.width + 1);
+        expect(metrics.y + metrics.height).toBeLessThanOrEqual(size.height + 1);
+      }
       await page.screenshot({ path: test.info().outputPath(`${colorScheme}.png`) });
     }
     await page.setViewportSize({ width: size.height, height: size.width });
-    await expect.poll(() => image.evaluate(img => Math.round(img.getBoundingClientRect().height))).toBe(size.width);
-    await expect(image).toHaveCSS("object-fit", "cover");
+    await expect(image).toHaveCSS("object-fit", size.rotatedFit);
+    if (size.rotatedFit === "cover") {
+      await expect.poll(() => image.evaluate(img => Math.round(img.getBoundingClientRect().height))).toBe(size.width);
+    } else {
+      const rotated = await image.boundingBox();
+      expect(rotated).not.toBeNull();
+      expect(rotated.width).toBeLessThanOrEqual(size.height + 1);
+      expect(rotated.height).toBeLessThanOrEqual(size.width + 1);
+    }
     // Offline navigation is covered by Chromium; the WebKit harness reports
     // an internal navigation error under context.setOffline on Windows.
     if (browserName === "chromium") await context.setOffline(true);
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
-    await expect(image).toHaveCSS("object-fit", "cover");
+    await expect(image).toHaveCSS("object-fit", size.rotatedFit);
     await expect.poll(() => image.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
   });
 });
@@ -156,8 +181,9 @@ test("reopening repairs image fits saved by the defective importer", async ({ pa
   const reopened = await context.newPage();
   await reopened.goto("/?date=2026-09-05");
   await expect(reopened.locator("html")).toHaveAttribute("data-app-ready", "1");
-  await expect(reopened.locator("html")).toHaveAttribute("data-image-fit", "cover");
-  await expect(reopened.locator("#schedule-image")).toHaveCSS("object-fit", "cover");
+  await expect(reopened.locator("html")).toHaveAttribute("data-requested-image-fit", "cover");
+  await expect(reopened.locator("html")).toHaveAttribute("data-image-fit", "contain");
+  await expect(reopened.locator("#schedule-image")).toHaveCSS("object-fit", "contain");
   const state = await reopened.evaluate(async () => {
     const store = await import("./local-store.js");
     const record = await store.loadUserConfig();
