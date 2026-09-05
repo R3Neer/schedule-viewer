@@ -36,7 +36,7 @@ test("updating an installed client replaces cached code and preserves v4 config 
     upgraded = true;
     await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration()).update(); });
     await expect(page.locator("html")).toHaveAttribute("data-config-source", "local");
-    await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-20260905-v1-0-1-r3"))).toBe(true);
+    await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-20260905-v1-0-1-r4"))).toBe(true);
     await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("schedule-viewer-offline-v4-1"))).toBe(false);
     const audit = await page.evaluate(async () => {
       const { getAsset, loadUserConfig } = await import("./local-store.js");

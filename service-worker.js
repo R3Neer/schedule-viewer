@@ -2,7 +2,7 @@ const CACHE_PREFIX = "schedule-viewer-";
 const LEGACY_CACHE_PREFIXES = ["schedule-viewer-offline-v2"];
 const MIGRATION_CACHE_PREFIX = "schedule-viewer-offline-v3";
 const LEGACY_IMMEDIATE_UPDATE_CACHES = ["schedule-viewer-offline-20260903-v4-6"];
-const RELEASE_ID = "20260905-v1-0-1-r3";
+const RELEASE_ID = "20260905-v1-0-1-r4";
 // A separate cache per release prevents unchanged lazy URLs from retaining old code.
 const CACHE_NAME = `${CACHE_PREFIX}offline-${RELEASE_ID}`;
 const SCOPE = self.registration.scope;

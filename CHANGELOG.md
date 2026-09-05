@@ -8,12 +8,12 @@ All notable changes to Schedule Viewer are documented here. This project follows
 
 - Installed iOS apps explicitly request a translucent status bar so portrait artwork can extend behind system chrome.
 - Configurations saved by the defective image-fit importer are repaired from their synchronized YAML on the next launch, without replacing local image bytes or requiring another import.
-
 - Touch artwork uses the complete viewport without padding or safe-area gutters; floating controls retain their safe-area positioning.
 - `cover` fills the viewport on desktop too. `contain` remains available for uncropped images.
 - Every image assignment inherits `defaults.image_fit` in both the browser importer and Python compiler. Explicit image fits survive YAML and `.schedule` round trips.
 - Newly assigned images inherit the configured fit when no existing override is present.
 - A new release cache identifier delivers the corrected CSS and importer to installed clients.
+- Installed iOS PWAs use the full standalone viewport height, avoiding a safe-area-sized strip at the bottom when artwork extends behind the status bar.
 
 ### Validation
 
@@ -21,7 +21,7 @@ All notable changes to Schedule Viewer are documented here. This project follows
 
 ### Updating existing schedules
 
-Re-import the original `.schedule` or YAML if an earlier import stored `contain` despite a global `cover` default. Stored explicit fits are preserved because they cannot be distinguished reliably from intentional overrides. Site data does not need to be cleared.
+Open the app once on this release to repair an earlier import that stored `contain` despite a global `cover` default. The repair only runs when the synchronized YAML proves that image fitting is the sole difference; re-import the original `.schedule` or YAML if the saved configuration also contains later edits. Site data does not need to be cleared.
 
 ## [1.0.0] - 2026-09-04
 

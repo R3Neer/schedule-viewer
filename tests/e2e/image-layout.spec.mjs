@@ -107,6 +107,11 @@ test("installed iOS shell requests artwork behind the status bar", async ({ page
   await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute("content", "yes");
   await expect(page.locator('meta[name="apple-mobile-web-app-status-bar-style"]')).toHaveAttribute("content", "black-translucent");
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute("content", /viewport-fit=cover/);
+  const css = await page.evaluate(async () => {
+    const link = [...document.querySelectorAll('link[rel="stylesheet"]')].find(link => /\/styles\.css/.test(link.href));
+    return (await fetch(link.href)).text();
+  });
+  expect(css).toMatch(/@media all and \(display-mode: standalone\)[\s\S]*height:\s*100vh/);
 });
 
 test("reopening repairs image fits saved by the defective importer", async ({ page, context }) => {
